@@ -30,9 +30,6 @@
         <connection>scm:git:git://github.com/datanucleus/datanucleus-hbase.git</connection>
         <url>scm:git:git://github.com/datanucleus/datanucleus-hbase.git</url>
         <developerConnection>scm:git:git://github.com/datanucleus/datanucleus-hbase.git</developerConnection>
-        <connection>scm:svn:svn://andy_jefferson@svn.code.sf.net/p/datanucleus/code/platform/store.hbase/trunk</connection>
-        <developerConnection>scm:svn:svn+ssh://andy_jefferson@svn.code.sf.net/p/datanucleus/code/platform/store.hbase/trunk</developerConnection>
-        <url>http://svn.code.sf.net/p/datanucleus/code/platform/store.hbase/trunk</url>
     </scm>
 
     <developers>
