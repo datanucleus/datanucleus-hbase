@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>datanucleus-hbase</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.2.5-SNAPSHOT</version>
 
     <name>DataNucleus HBase plugin</name>
     <description>
@@ -59,7 +59,7 @@
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase</artifactId>
-            <version>[0.94.11, 0.95)</version>
+            <version>[0.90.0, 0.95.0)</version>
         </dependency>
     </dependencies>
 </project>
