@@ -37,6 +37,8 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     protected static final Localiser LOCALISER_HBASE = Localiser.getInstance(
         "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
 
+    private Configuration config;
+
     private HBaseConnectionPool connectionPool;
 
     private HTablePool tablePool;
@@ -82,7 +84,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             hbaseStr = hbaseStr.substring(1);
         }
 
-        Configuration hbaseConfig = ((HBaseStoreManager)storeMgr).getHbaseConfig();
+        config = ((HBaseStoreManager)storeMgr).getHbaseConfig();
         if (hbaseStr.length() > 0)
         {
             // Remote, so specify server
@@ -93,13 +95,13 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
                 serverName = hbaseStr.substring(0, hbaseStr.indexOf(':'));
                 portName = hbaseStr.substring(hbaseStr.indexOf(':')+1);
             }
-            hbaseConfig.set("hbase.zookeeper.quorum", serverName);
-            hbaseConfig.set("hbase.master", serverName + ":" + portName);
+            config.set("hbase.zookeeper.quorum", serverName);
+            config.set("hbase.master", serverName + ":" + portName);
         }
 
         int maxSize = storeMgr.getIntProperty("datanucleus.hbase.tablePoolMaxSize");
         maxSize = maxSize > 0 ? maxSize : Integer.MAX_VALUE;
-        tablePool = new HTablePool(hbaseConfig, maxSize);
+        tablePool = new HTablePool(config, maxSize);
     }
 
     /**
