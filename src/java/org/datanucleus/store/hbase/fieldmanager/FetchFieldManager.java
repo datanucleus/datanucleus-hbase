@@ -475,6 +475,18 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             return fetchShortInternal(mmd, bytes);
         }
+        else if (Enum.class.isAssignableFrom(mmd.getType()))
+        {
+            ColumnMetaData colmd = null;
+            if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
+            {
+                colmd = mmd.getColumnMetaData()[0];
+            }
+            if (MetaDataUtils.persistColumnAsNumeric(colmd))
+            {
+                return fetchIntInternal(mmd, bytes);
+            }
+        }
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
         ObjectInputStream ois = null;
