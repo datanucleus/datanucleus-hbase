@@ -6,12 +6,19 @@ DataNucleus support for persistence to HBase datastores. See http://hbase.apache
 This is built using Maven, by executing `mvn clean install` which installs the built jar in your local Maven
 repository.
 
-Please refer to http://www.datanucleus.org/plugins/store.hbase.html  for more information.
 
-License
--------
-Apache 2 licensed
+KeyFacts
+--------
+__License__ : Apache 2 licensed
 
-Issue Tracker
--------------
-http://www.datanucleus.org/servlet/jira/browse/NUCHBASE
+__Issue Tracker__ : http://www.datanucleus.org/servlet/jira/browse/NUCHBASE
+
+__RoadMap__ : http://issues.datanucleus.org/browse/NUCHBASE?report=com.atlassian.jira.plugin.system.project:roadmap-panel
+
+__Javadocs__ : [3.2](http://www.datanucleus.org/javadocs/store.hbase/3.2/),  [3.1](http://www.datanucleus.org/javadocs/store.hbase/3.1/), [3.0](http://www.datanucleus.org/javadocs/store.hbase/3.0/), [2.0](http://www.datanucleus.org/javadocs/store.hbase/2.0/), [1.0](http://www.datanucleus.org/javadocs/store.hbase/1.0/)
+
+__Download(Releases)__ : [Maven Central](http://central.maven.org/maven2/org/datanucleus/datanucleus-hbase)
+
+__Download(Nightly)__ : [Nightly Builds](http://central.maven.org/maven2/org/datanucleus/datanucleus-hbase)
+
+__Dependencies__ : See file [pom.xml](pom.xml)
