@@ -212,10 +212,17 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         return props;
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.schema.SchemaAwareStoreManager#createSchema(java.util.Set, java.util.Properties)
-     */
-    public void createSchema(Set<String> classNames, Properties props)
+    public void createSchema(String schemaName, Properties props)
+    {
+        throw new UnsupportedOperationException("Dont support the creation of a schema with HBase");
+    }
+
+    public void deleteSchema(String schemaName, Properties props)
+    {
+        throw new UnsupportedOperationException("Dont support the deletion of a schema with HBase");
+    }
+
+    public void createSchemaForClasses(Set<String> classNames, Properties props)
     {
         if (isAutoCreateTables() || isAutoCreateColumns())
         {
@@ -233,10 +240,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.schema.SchemaAwareStoreManager#deleteSchema(java.util.Set)
-     */
-    public void deleteSchema(Set<String> classNames, Properties props)
+    public void deleteSchemaForClasses(Set<String> classNames, Properties props)
     {
         Iterator<String> classIter = classNames.iterator();
         ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
@@ -251,10 +255,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.schema.SchemaAwareStoreManager#validateSchema(java.util.Set)
-     */
-    public void validateSchema(Set<String> classNames, Properties props)
+    public void validateSchemaForClasses(Set<String> classNames, Properties props)
     {
         if (isValidateTables() || isValidateColumns())
         {
