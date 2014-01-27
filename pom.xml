@@ -8,7 +8,7 @@
     </parent>
 
     <artifactId>datanucleus-hbase</artifactId>
-    <version>3.2.6-SNAPSHOT</version>
+    <version>3.2.6</version>
 
     <name>DataNucleus HBase plugin</name>
     <description>
