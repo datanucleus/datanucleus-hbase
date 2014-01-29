@@ -717,7 +717,7 @@ public class HBaseUtils
     static byte[] getRowKeyForPkValue(Object[] pkValues, NucleusContext nucCtx) throws IOException
     {
         boolean useSerialisation =
-            nucCtx.getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
+            nucCtx.getConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
 
         if (pkValues.length == 1 && !useSerialisation)
         {
