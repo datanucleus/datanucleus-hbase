@@ -203,7 +203,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
     public void storeObjectField(int fieldNumber, Object value)
     {
-        ExecutionContext ec = op.getExecutionContext();
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (!isStorable(mmd))
@@ -212,6 +211,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
 
         RelationType relationType = mmd.getRelationType(clr);
+        // TODO Make use of isMemberEmbedded
         if (mmd.isEmbedded() && RelationType.isRelationSingleValued(relationType))
         {
             // Embedded PC object
@@ -249,7 +249,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (RelationType.isRelationSingleValued(relationType))
             {
                 // PC object, so make sure it is persisted
-                Object valuePC = op.getExecutionContext().persistObjectInternal(value, op, fieldNumber, -1);
+                Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
                 if (mmd.isSerialized())
                 {
                     // Persist as serialised into the column of this object
@@ -273,8 +273,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     while (collIter.hasNext())
                     {
                         Object element = collIter.next();
-                        Object elementPC = op.getExecutionContext().persistObjectInternal(element, op, fieldNumber, -1);
-                        Object elementID = op.getExecutionContext().getApiAdapter().getIdForObject(elementPC);
+                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
                         collIds.add(elementID);
                     }
 
@@ -303,12 +303,12 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         if (ec.getApiAdapter().isPersistable(mapKey))
                         {
                             Object pKey = ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
-                            mapKey = op.getExecutionContext().getApiAdapter().getIdForObject(pKey);
+                            mapKey = ec.getApiAdapter().getIdForObject(pKey);
                         }
                         if (ec.getApiAdapter().isPersistable(mapValue))
                         {
                             Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
-                            mapValue = op.getExecutionContext().getApiAdapter().getIdForObject(pVal);
+                            mapValue = ec.getApiAdapter().getIdForObject(pVal);
                         }
                         mapIds.put(mapKey, mapValue);
                     }
@@ -355,7 +355,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     if (mmd.getTypeConverterName() != null)
                     {
                         // User-defined converter
-                        TypeManager typeMgr = op.getExecutionContext().getNucleusContext().getTypeManager();
+                        TypeManager typeMgr = ec.getNucleusContext().getTypeManager();
                         TypeConverter conv = typeMgr.getTypeConverterForName(mmd.getTypeConverterName());
                         Class datastoreType = TypeManager.getDatastoreTypeForTypeConverter(conv, mmd.getType());
                         if (datastoreType == String.class)

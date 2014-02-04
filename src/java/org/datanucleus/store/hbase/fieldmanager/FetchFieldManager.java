@@ -41,34 +41,28 @@ import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
-import org.datanucleus.store.fieldmanager.AbstractFieldManager;
+import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.TypeManager;
 import org.datanucleus.store.types.converters.TypeConverter;
 
-public class FetchFieldManager extends AbstractFieldManager
+public class FetchFieldManager extends AbstractFetchFieldManager
 {
     Result result;
-    ExecutionContext ec;
-    ObjectProvider sm;
-    AbstractClassMetaData cmd;
     String tableName;
 
     public FetchFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, Result result, String tableName)
     {
-        this.ec = ec;
-        this.cmd = cmd;
+        super(ec, cmd);
         this.result = result;
         this.tableName = tableName;
     }
 
-    public FetchFieldManager(ObjectProvider sm, Result result, String tableName)
+    public FetchFieldManager(ObjectProvider op, Result result, String tableName)
     {
-        this.ec = sm.getExecutionContext();
-        this.sm = sm;
-        this.cmd = sm.getClassMetaData();
+        super(op);
         this.result = result;
         this.tableName = tableName;
     }
@@ -231,7 +225,7 @@ public class FetchFieldManager extends AbstractFieldManager
                     return null;
                 }
 
-                ObjectProvider embSM = ec.newObjectProviderForEmbedded(embcmd, sm, fieldNumber);
+                ObjectProvider embSM = ec.newObjectProviderForEmbedded(embcmd, op, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, mmd, tableName);
                 embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
@@ -286,9 +280,9 @@ public class FetchFieldManager extends AbstractFieldManager
                     Object elementId = idIter.next();
                     coll.add(ec.findObject(elementId, true, true, null));
                 }
-                if (sm != null)
+                if (op != null)
                 {
-                    return sm.wrapSCOField(fieldNumber, coll, false, false, true);
+                    return op.wrapSCOField(fieldNumber, coll, false, false, true);
                 }
                 return coll;
             }
@@ -329,9 +323,9 @@ public class FetchFieldManager extends AbstractFieldManager
                     }
                     map.put(mapKey, mapValue);
                 }
-                if (sm != null)
+                if (op != null)
                 {
-                    return sm.wrapSCOField(fieldNumber, map, false, false, true);
+                    return op.wrapSCOField(fieldNumber, map, false, false, true);
                 }
                 return map;
             }
@@ -426,9 +420,9 @@ public class FetchFieldManager extends AbstractFieldManager
                     }
                 }
             }
-            if (sm != null)
+            if (op != null)
             {
-                return sm.wrapSCOField(fieldNumber, returnValue, false, false, true);
+                return op.wrapSCOField(fieldNumber, returnValue, false, false, true);
             }
             return returnValue;
         }

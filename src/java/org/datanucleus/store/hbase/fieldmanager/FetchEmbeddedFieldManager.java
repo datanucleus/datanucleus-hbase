@@ -103,7 +103,7 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
                     return null;
                 }
 
-                ObjectProvider embSM = ec.newObjectProviderForEmbedded(embcmd, sm, fieldNumber);
+                ObjectProvider embSM = ec.newObjectProviderForEmbedded(embcmd, op, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmd, tableName);
                 embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
@@ -179,9 +179,9 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
                     coll.add(ec.findObject(elementId, true, true, null));
                 }
 
-                if (sm != null)
+                if (op != null)
                 {
-                    return sm.wrapSCOField(fieldNumber, coll, false, false, true);
+                    return op.wrapSCOField(fieldNumber, coll, false, false, true);
                 }
                 return coll;
             }
@@ -223,7 +223,7 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
                     return Enum.valueOf(embMmd.getType(), (String)value);
                 }
 
-                TypeConverter strConv = sm.getExecutionContext().getTypeManager().getTypeConverterForType(embMmd.getType(), String.class);
+                TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(embMmd.getType(), String.class);
                 if (strConv != null)
                 {
                     // Persisted as a String, so convert back
@@ -232,9 +232,9 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
                 }
             }
 
-            if (sm != null)
+            if (op != null)
             {
-                return sm.wrapSCOField(fieldNumber, returnValue, false, false, true);
+                return op.wrapSCOField(fieldNumber, returnValue, false, false, true);
             }
             return returnValue;
         }
