@@ -191,7 +191,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 put.add(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
             }
 
-            if (storeMgr.getStringProperty(PropertyNames.PROPERTY_TENANT_ID) != null)
+            if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
             {
                 if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
                 {
@@ -203,7 +203,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     String familyName = HBaseUtils.getFamilyNameForColumnName(name, tableName);
                     String qualifName = HBaseUtils.getQualifierNameForColumnName(name);
                     put.add(familyName.getBytes(), qualifName.getBytes(),
-                        storeMgr.getStringProperty(PropertyNames.PROPERTY_TENANT_ID).getBytes());
+                        storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID).getBytes());
                 }
             }
 

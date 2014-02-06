@@ -257,7 +257,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
                 HBaseBooleanExpression filterExpr = null;
                 AbstractClassMetaData cmd = getCandidateClassMetaData();
-                if (storeMgr.getStringProperty(PropertyNames.PROPERTY_TENANT_ID) != null)
+                if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
                 {
                     if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
                     {
@@ -270,7 +270,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                         String name = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.MULTITENANCY_COLUMN);
                         String familyName = HBaseUtils.getFamilyNameForColumnName(name, tableName);
                         String qualifName = HBaseUtils.getQualifierNameForColumnName(name);
-                        String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_TENANT_ID);
+                        String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);
                         filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                     }
                 }
