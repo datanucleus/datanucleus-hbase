@@ -104,7 +104,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
         if (!storeMgr.managesClass(op.getClassMetaData().getFullClassName()))
         {
-            storeMgr.addClass(op.getClassMetaData().getFullClassName(),op.getExecutionContext().getClassLoaderResolver());
+            storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), op.getClassMetaData().getFullClassName());
         }
 
         ExecutionContext ec = op.getExecutionContext();
