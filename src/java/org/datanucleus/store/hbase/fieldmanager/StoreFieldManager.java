@@ -211,8 +211,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
 
         RelationType relationType = mmd.getRelationType(clr);
-        // TODO Make use of isMemberEmbedded
-        if (mmd.isEmbedded() && RelationType.isRelationSingleValued(relationType))
+        if (RelationType.isRelationSingleValued(relationType) && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
         {
             // Embedded PC object
             Class embcls = mmd.getType();
@@ -491,8 +490,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             for (int i=0;i<embmmds.length;i++)
             {
                 RelationType relationType = embmmds[i].getRelationType(clr);
-                if ((relationType == RelationType.ONE_TO_ONE_BI || relationType == RelationType.ONE_TO_ONE_UNI) && 
-                    embmmds[i].isEmbedded())
+                if (RelationType.isRelationSingleValued(relationType) && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, embmmds[i], relationType, mmd))
                 {
                     deleteColumnsForEmbeddedMember(embmmds[i], clr, ec);
                 }

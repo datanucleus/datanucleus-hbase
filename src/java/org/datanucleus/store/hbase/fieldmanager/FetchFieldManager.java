@@ -198,7 +198,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         RelationType relationType = mmd.getRelationType(clr);
-        if (mmd.isEmbedded() && RelationType.isRelationSingleValued(relationType))
+        if (RelationType.isRelationSingleValued(relationType) && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
         {
             // Persistable object embedded into table of this object
             Class embcls = mmd.getType();

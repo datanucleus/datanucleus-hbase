@@ -54,6 +54,7 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
+import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
@@ -343,7 +344,8 @@ public class HBaseUtils
             {
                 AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
                 RelationType relationType = mmd.getRelationType(clr);
-                if ((relationType == RelationType.ONE_TO_ONE_UNI || relationType == RelationType.ONE_TO_ONE_BI) && mmd.isEmbedded())
+                if (RelationType.isRelationSingleValued(relationType) && 
+                     MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, mmd, relationType, null))
                 {
                     createSchemaForEmbeddedMember(storeMgr, hTable, mmd, clr, validateOnly);
                 }
@@ -413,7 +415,8 @@ public class HBaseUtils
         {
             AbstractMemberMetaData embMmd = embmmds[j];
             RelationType embRelationType = embMmd.getRelationType(clr);
-            if ((embRelationType == RelationType.ONE_TO_ONE_UNI || embRelationType == RelationType.ONE_TO_ONE_BI) && embMmd.isEmbedded())
+            if (RelationType.isRelationSingleValued(embRelationType) && 
+                MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, embMmd, embRelationType, mmd))
             {
                 // Recurse
                 return createSchemaForEmbeddedMember(storeMgr, hTable, embMmd, clr, validateOnly);
