@@ -60,6 +60,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     {
         super("hbase", clr, ctx, props);
 
+        schemaHandler = new HBaseSchemaHandler(this);
         persistenceHandler = new HBasePersistenceHandler(this);
 
         // Add listener so we can check all metadata for unsupported features and required schema
@@ -161,7 +162,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
                         registerStoreData(newStoreData(cmd, clr));
                     }
 
-                    if (isAutoCreateTables() || isAutoCreateColumns())
+                    if (getSchemaHandler().isAutoCreateTables() || getSchemaHandler().isAutoCreateColumns())
                     {
                         HBaseUtils.createSchemaForClass(this, cmd, false);
                     }
@@ -214,62 +215,26 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
     public void createSchema(String schemaName, Properties props)
     {
-        throw new UnsupportedOperationException("Dont support the creation of a schema with HBase");
+        schemaHandler.createSchema(schemaName, props, null);
     }
 
     public void deleteSchema(String schemaName, Properties props)
     {
-        throw new UnsupportedOperationException("Dont support the deletion of a schema with HBase");
+        schemaHandler.deleteSchema(schemaName, props, null);
     }
 
     public void createSchemaForClasses(Set<String> classNames, Properties props)
     {
-        if (isAutoCreateTables() || isAutoCreateColumns())
-        {
-            Iterator<String> classIter = classNames.iterator();
-            ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
-            while (classIter.hasNext())
-            {
-                String className = classIter.next();
-                AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
-                if (cmd != null)
-                {
-                    HBaseUtils.createSchemaForClass(this, cmd, false);
-                }
-            }
-        }
+        schemaHandler.createSchemaForClasses(classNames, props, null);
     }
 
     public void deleteSchemaForClasses(Set<String> classNames, Properties props)
     {
-        Iterator<String> classIter = classNames.iterator();
-        ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
-        while (classIter.hasNext())
-        {
-            String className = classIter.next();
-            AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
-            if (cmd != null)
-            {
-                HBaseUtils.deleteSchemaForClass(this, cmd);
-            }
-        }
+        schemaHandler.deleteSchemaForClasses(classNames, props, null);
     }
 
     public void validateSchemaForClasses(Set<String> classNames, Properties props)
     {
-        if (isValidateTables() || isValidateColumns())
-        {
-            Iterator<String> classIter = classNames.iterator();
-            ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
-            while (classIter.hasNext())
-            {
-                String className = classIter.next();
-                AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
-                if (cmd != null)
-                {
-                    HBaseUtils.createSchemaForClass(this, cmd, true);
-                }
-            }
-        }
+        schemaHandler.validateSchema(classNames, props, null);
     }
 }

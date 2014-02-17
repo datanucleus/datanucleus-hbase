@@ -101,7 +101,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
                 {
                     if (!admin.tableExists(this.tableName))
                     {
-                        if (!storeMgr.isAutoCreateTables())
+                        if (!storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
                             throw new NucleusUserException(LOCALISER.msg("040011", tableName));
                         }

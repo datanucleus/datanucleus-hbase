@@ -254,6 +254,7 @@ public class HBaseUtils
 
     /**
      * Create a schema in HBase. Do not make this method public, since it uses privileged actions.
+     * TODO Move to HBaseSchemaHandler
      * @param storeMgr HBase StoreManager
      * @param acmd Metadata for the class
      * @param validateOnly Whether to only validate for existence and flag missing schema in the log
@@ -296,7 +297,7 @@ public class HBaseUtils
                             NucleusLogger.DATASTORE_SCHEMA.info(LOCALISER.msg("HBase.SchemaValidate.Class",
                                 acmd.getFullClassName(), tableName));
                         }
-                        else if (storeMgr.isAutoCreateTables())
+                        else if (storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
                             NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class",
                                 acmd.getFullClassName(), tableName));
@@ -323,7 +324,7 @@ public class HBaseUtils
                     NucleusLogger.DATASTORE_SCHEMA.info(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
                         tableName, tableName));
                 }
-                else if (storeMgr.isAutoCreateColumns())
+                else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                 {
                     NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
                         tableName, tableName));
@@ -360,7 +361,7 @@ public class HBaseUtils
                             NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
                                 tableName, familyName));
                         }
-                        else if (storeMgr.isAutoCreateColumns())
+                        else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                         {
                             NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
                                 tableName, familyName));
@@ -444,69 +445,6 @@ public class HBaseUtils
         }
 
         return modified;
-    }
-
-    /**
-     * Delete the schema for the specified class from HBase.
-     * Do not make this method public, since it uses privileged actions
-     * @param storeMgr HBase StoreManager
-     * @param acmd Metadata for the class
-     */
-    static void deleteSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData acmd)
-    {
-        if (acmd.isEmbeddedOnly())
-        {
-            // No schema present since only ever embedded
-            return;
-        }
-
-        final String tableName = storeMgr.getNamingFactory().getTableName(acmd);
-        final Configuration config = storeMgr.getHbaseConfig();
-        try
-        {
-            final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
-                {
-                    return new HBaseAdmin(config);
-                }
-            });
-
-            // Find table descriptor, if not existing, create it
-            final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
-                {
-                    HTableDescriptor hTable;
-                    try
-                    {
-                        hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
-                    }
-                    catch (TableNotFoundException ex)
-                    {
-                        hTable = new HTableDescriptor(tableName);
-                        hBaseAdmin.createTable(hTable);
-                    }
-                    return hTable;
-                }
-            });
-
-            AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
-                {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaDelete.Class",
-                        acmd.getFullClassName(), hTable.getNameAsString()));
-                    hBaseAdmin.disableTable(hTable.getName());
-                    hBaseAdmin.deleteTable(hTable.getName());
-                    return null;
-                }
-            });
-        }
-        catch (PrivilegedActionException e)
-        {
-            throw new NucleusDataStoreException(e.getMessage(), e.getCause());
-        }
     }
 
     /**
