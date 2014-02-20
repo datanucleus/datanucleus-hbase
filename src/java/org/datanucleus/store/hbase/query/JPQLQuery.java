@@ -166,11 +166,6 @@ public class JPQLQuery extends AbstractJPQLQuery
             candidateClassName = candidateClass.getName();
         }
 
-        if (candidateClass == null)
-        {
-            throw new NucleusUserException(LOCALISER.msg("021009", candidateClassName));
-        }
-
         // Make sure any persistence info is loaded
         ec.hasPersistenceInformationForClass(candidateClass);
 

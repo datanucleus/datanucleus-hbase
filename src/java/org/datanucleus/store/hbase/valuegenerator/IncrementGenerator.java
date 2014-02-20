@@ -147,7 +147,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
     /* (non-Javadoc)
      * @see org.datanucleus.store.valuegenerator.AbstractGenerator#reserveBlock(long)
      */
-    protected ValueGenerationBlock reserveBlock(long size)
+    protected synchronized ValueGenerationBlock reserveBlock(long size)
     {
         if (size < 1)
         {

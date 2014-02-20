@@ -469,7 +469,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
 
         // Separate the objects to be deleted into groups, for the "table" in question
-        Map<String, Set<ObjectProvider>> opsByTable = new HashMap();
+        Map<String, Set<ObjectProvider>> opsByTable = new HashMap<String, Set<ObjectProvider>>();
         for (int i=0;i<ops.length;i++)
         {
             AbstractClassMetaData cmd = ops[i].getClassMetaData();
@@ -484,9 +484,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
 
         Set<NucleusOptimisticException> optimisticExcps = null;
-        for (String tableName : opsByTable.keySet())
+        for (Map.Entry<String, Set<ObjectProvider>> entry : opsByTable.entrySet())
         {
-            Set<ObjectProvider> opsForTable = opsByTable.get(tableName);
+            String tableName = entry.getKey();
+            Set<ObjectProvider> opsForTable = entry.getValue();
             ExecutionContext ec = ops[0].getExecutionContext();
             HBaseManagedConnection mconn = (HBaseManagedConnection)storeMgr.getConnection(ec);
             try

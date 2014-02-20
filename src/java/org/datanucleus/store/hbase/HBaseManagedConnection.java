@@ -88,19 +88,20 @@ public class HBaseManagedConnection extends AbstractManagedConnection
             return;
         }
 
-        for (ManagedConnectionResourceListener listener : listeners) {
+        for (ManagedConnectionResourceListener listener : listeners) 
+        {
             listener.managedConnectionPreClose();
         }
+
         try
         {
             Map<String, HTableInterface> oldtables = tables;
             tables = new HashMap<String, HTableInterface>();
 
-            for (String tableName : oldtables.keySet())
+            for (HTableInterface table : oldtables.values())
             {
                 try
                 {
-                    HTableInterface table = oldtables.get(tableName);
                     table.close();
                 }
                 catch (IOException e)
@@ -112,7 +113,8 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         }
         finally
         {
-            for (ManagedConnectionResourceListener listener : listeners) {
+            for (ManagedConnectionResourceListener listener : listeners)
+            {
                 listener.managedConnectionPostClose();
             }
         }
