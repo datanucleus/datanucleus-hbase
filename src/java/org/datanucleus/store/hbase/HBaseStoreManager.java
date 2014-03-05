@@ -107,6 +107,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     {
         Set set = new HashSet();
         set.add(StoreManager.OPTION_APPLICATION_ID);
+        set.add(StoreManager.OPTION_APPLICATION_COMPOSITE_ID);
         set.add(StoreManager.OPTION_DATASTORE_ID);
         set.add(StoreManager.OPTION_NONDURABLE_ID);
         set.add(StoreManager.OPTION_ORM);
