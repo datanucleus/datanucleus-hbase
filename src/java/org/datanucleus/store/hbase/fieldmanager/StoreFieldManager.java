@@ -48,6 +48,7 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.types.TypeManager;
 import org.datanucleus.store.types.converters.TypeConverter;
+import org.datanucleus.store.types.converters.TypeConverterHelper;
 
 public class StoreFieldManager extends AbstractStoreFieldManager
 {
@@ -356,7 +357,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         // User-defined converter
                         TypeManager typeMgr = ec.getNucleusContext().getTypeManager();
                         TypeConverter conv = typeMgr.getTypeConverterForName(mmd.getTypeConverterName());
-                        Class datastoreType = TypeManager.getDatastoreTypeForTypeConverter(conv, mmd.getType());
+                        Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
                         if (datastoreType == String.class)
                         {
                             String strValue = (String)conv.toDatastoreType(value);

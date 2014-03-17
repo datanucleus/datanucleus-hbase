@@ -45,8 +45,8 @@ import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.types.SCOUtils;
-import org.datanucleus.store.types.TypeManager;
 import org.datanucleus.store.types.converters.TypeConverter;
+import org.datanucleus.store.types.converters.TypeConverterHelper;
 
 public class FetchFieldManager extends AbstractFetchFieldManager
 {
@@ -359,7 +359,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     // User-defined type converter
                     byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
                     TypeConverter conv = ec.getNucleusContext().getTypeManager().getTypeConverterForName(mmd.getTypeConverterName());
-                    Class datastoreType = TypeManager.getDatastoreTypeForTypeConverter(conv, mmd.getType());
+                    Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
                     if (datastoreType == String.class)
                     {
                         returnValue = conv.toMemberType((String)value);
