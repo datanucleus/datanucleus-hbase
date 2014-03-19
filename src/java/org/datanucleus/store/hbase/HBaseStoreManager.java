@@ -136,7 +136,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     }
 
     /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractStoreManager#addClasses(java.lang.String[], org.datanucleus.ClassLoaderResolver)
+     * @see org.datanucleus.store.AbstractStoreManager#manageClasses(org.datanucleus.ClassLoaderResolver, java.lang.String[])
      */
     @Override
     public void manageClasses(ClassLoaderResolver clr, String... classNames)
