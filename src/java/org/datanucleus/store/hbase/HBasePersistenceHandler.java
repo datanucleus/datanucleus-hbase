@@ -22,9 +22,7 @@ package org.datanucleus.store.hbase;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,7 +48,6 @@ import org.datanucleus.metadata.DiscriminatorMetaData;
 import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
-import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.StoreManager;
@@ -207,50 +204,41 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            if (cmd.isVersioned())
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (vermd != null)
             {
-                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
-                String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-                String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
-                if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), null);
+                op.setTransactionalVersion(nextVersion);
+                if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
-                    long versionNumber = 1;
-                    op.setTransactionalVersion(Long.valueOf(versionNumber));
-                    if (NucleusLogger.DATASTORE.isDebugEnabled())
-                    {
-                        NucleusLogger.DATASTORE.debug(LOCALISER_HBASE.msg("HBase.Insert.ObjectPersistedWithVersion",
-                            op.getObjectAsPrintable(), op.getInternalObjectId(), "" + versionNumber));
-                    }
-                    if (vermd.getFieldName() != null)
-                    {
-                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                        Object verFieldValue = Long.valueOf(versionNumber);
-                        if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
-                        {
-                            verFieldValue = Integer.valueOf((int)versionNumber);
-                        }
-                        op.replaceField(verMmd.getAbsoluteFieldNumber(), verFieldValue);
-                    }
-                    else
-                    {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(versionNumber));
-                    }
+                    NucleusLogger.DATASTORE.debug(LOCALISER_HBASE.msg("HBase.Insert.ObjectPersistedWithVersion",
+                        op.getObjectAsPrintable(), op.getInternalObjectId(), "" + nextVersion));
                 }
-                else if (vermd.getVersionStrategy() == VersionStrategy.DATE_TIME)
+
+                if (vermd.getFieldName() != null)
                 {
-                    Date date = new Date();
-                    Timestamp ts = new Timestamp(date.getTime());
-                    op.setTransactionalVersion(ts);
-                    if (NucleusLogger.DATASTORE.isDebugEnabled())
+                    // Version stored in field, so update the field
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                    Object verFieldValue = (Long)nextVersion;
+                    if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
                     {
-                        NucleusLogger.DATASTORE.debug(LOCALISER_HBASE.msg("HBase.Insert.ObjectPersistedWithVersion",
-                            op.getObjectAsPrintable(), op.getInternalObjectId(), "" + ts));
+                        verFieldValue = Integer.valueOf(((Long)nextVersion).intValue());
                     }
-                    if (vermd.getFieldName() != null)
+                    op.replaceField(verMmd.getAbsoluteFieldNumber(), verFieldValue);
+                }
+                else
+                {
+                    // Surrogate version, so add to the put
+                    String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
+                    String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
+                    String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
+                    if (nextVersion instanceof Long)
                     {
-                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                        op.replaceField(verMmd.getAbsoluteFieldNumber(), ts);
+                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
+                    }
+                    else if (nextVersion instanceof Integer)
+                    {
+                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Integer)nextVersion));
                     }
                     else
                     {
@@ -258,7 +246,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         {
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
                             ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(ts);
+                            oos.writeObject(nextVersion);
                             put.add(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
                             oos.close();
                             bos.close();
@@ -340,20 +328,18 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 // Optimistic checking of version
                 Result result = HBaseUtils.getResultForObject(op, table);
-                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName,
-                    storeMgr);
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName, storeMgr);
                 VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
 
             int[] updatedFieldNums = fieldNumbers;
             Put put = HBaseUtils.getPutForObject(op);
             Delete delete = HBaseUtils.getDeleteForObject(op);
-            if (cmd.isVersioned())
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (vermd != null)
             {
                 // Version object so calculate version to store with
-                Object currentVersion = op.getTransactionalVersion();
-                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), currentVersion);
+                Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), op.getTransactionalVersion());
                 op.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
@@ -393,7 +379,19 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     }
                     else
                     {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), ((String)nextVersion).getBytes());
+                        try
+                        {
+                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                            ObjectOutputStream oos = new ObjectOutputStream(bos);
+                            oos.writeObject(nextVersion);
+                            put.add(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
+                            oos.close();
+                            bos.close();
+                        }
+                        catch (IOException e)
+                        {
+                            throw new NucleusException(e.getMessage(), e);
+                        }
                     }
                 }
             }
@@ -713,15 +711,14 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             FetchFieldManager fm = new FetchFieldManager(op, result, tableName);
             op.replaceFields(cmd.getAllMemberPositions(), fm);
 
-            if (cmd.isVersioned() && op.getTransactionalVersion() == null)
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (vermd != null && op.getTransactionalVersion() == null)
             {
                 // No version set, so retrieve it
-                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
                 if (vermd.getFieldName() != null)
                 {
                     // Version stored in a field
-                    Object datastoreVersion =
-                        op.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
+                    Object datastoreVersion = op.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
                     op.setVersion(datastoreVersion);
                 }
                 else
