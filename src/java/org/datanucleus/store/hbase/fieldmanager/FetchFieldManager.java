@@ -411,6 +411,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 else
                 {
                     // Fallback to built-in type converter
+                    // TODO Make use of default TypeConverter for a type before falling back to String/Long
                     TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
                     if (strConv != null)
                     {

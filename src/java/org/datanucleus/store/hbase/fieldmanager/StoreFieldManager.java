@@ -444,8 +444,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     }
 
                     // Fallback to built-in String converters
-                    TypeConverter strConv = 
-                        ec.getNucleusContext().getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
+                    // TODO Make use of default TypeConverter for a type before falling back to String/Long
+                    TypeConverter strConv = ec.getNucleusContext().getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
                     if (strConv != null)
                     {
                         // Persist as a String
