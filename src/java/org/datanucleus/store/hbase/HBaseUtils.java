@@ -128,6 +128,7 @@ public class HBaseUtils
      * </ul>
      * @param mmd Metadata for the embedded field
      * @param fieldNumber Number of the field in the embedded object
+     * @param tableName Name of the table
      * @return The family name
      */
     public static String getFamilyName(AbstractMemberMetaData mmd, int fieldNumber, String tableName)
@@ -199,6 +200,7 @@ public class HBaseUtils
      * </ul>
      * @param acmd Metadata for the class
      * @param absoluteFieldNumber Field number
+     * @param tableName Name of the table
      * @return The family name
      */
     public static String getFamilyName(AbstractClassMetaData acmd, int absoluteFieldNumber, String tableName)
@@ -456,6 +458,7 @@ public class HBaseUtils
      * @param result The result
      * @param ec ExecutionContext
      * @param tableName Name of the table
+     * @param storeMgr StoreManager
      * @return The version
      */
     public static Object getVersionForObject(AbstractClassMetaData cmd, Result result, ExecutionContext ec,
@@ -524,10 +527,10 @@ public class HBaseUtils
      * @param cmd Metadata for the class
      * @param result The result
      * @param tableName Name of the table
+     * @param storeMgr Store Manager
      * @return The surrogate version
      */
-    public static Object getSurrogateVersionForObject(AbstractClassMetaData cmd, Result result, String tableName,
-            StoreManager storeMgr)
+    public static Object getSurrogateVersionForObject(AbstractClassMetaData cmd, Result result, String tableName, StoreManager storeMgr)
     {
         VersionMetaData vermd = cmd.getVersionMetaDataForClass();
         String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
