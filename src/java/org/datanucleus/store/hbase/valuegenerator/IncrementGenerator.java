@@ -37,13 +37,12 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.store.hbase.HBaseStoreManager;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
-import org.datanucleus.store.valuegenerator.ValueGenerator;
 import org.datanucleus.util.NucleusLogger;
 
 /**
  * Generator that uses a table in HBase to store and allocate identity values.
  */
-public class IncrementGenerator extends AbstractDatastoreGenerator implements ValueGenerator
+public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
 {
     static final String INCREMENT_COL_NAME = "increment";
 
@@ -147,7 +146,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
     /* (non-Javadoc)
      * @see org.datanucleus.store.valuegenerator.AbstractGenerator#reserveBlock(long)
      */
-    protected synchronized ValueGenerationBlock reserveBlock(long size)
+    protected synchronized ValueGenerationBlock<Long> reserveBlock(long size)
     {
         if (size < 1)
         {
@@ -161,7 +160,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
 
         // Allocate value(s)
         long number;
-        List oids = new ArrayList();
+        List<Long> oids = new ArrayList<Long>();
         try
         {
             number = table.incrementColumnValue(Bytes.toBytes(key), Bytes.toBytes(INCREMENT_COL_NAME), 
@@ -177,6 +176,6 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
             NucleusLogger.VALUEGENERATION.error("IncrementGenerator: Error incrementing generated value", ex);
             throw new NucleusDataStoreException("Error incrementing generated value.", ex);
         }
-        return new ValueGenerationBlock(oids);
+        return new ValueGenerationBlock<Long>(oids);
     }
 }
