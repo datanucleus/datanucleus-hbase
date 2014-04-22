@@ -48,7 +48,7 @@ import org.datanucleus.ExecutionContext;
 import org.datanucleus.NucleusContext;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
-import org.datanucleus.identity.OID;
+import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
@@ -630,7 +630,7 @@ public class HBaseUtils
     {
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            return new Object[]{((OID) op.getInternalObjectId()).getKeyValue()};
+            return new Object[]{IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId())};
         }
         else if (cmd.getIdentityType() == IdentityType.APPLICATION)
         {

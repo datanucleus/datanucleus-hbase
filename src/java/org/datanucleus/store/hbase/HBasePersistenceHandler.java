@@ -41,7 +41,7 @@ import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
 import org.datanucleus.exceptions.NucleusOptimisticException;
 import org.datanucleus.exceptions.NucleusUserException;
-import org.datanucleus.identity.OID;
+import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.DiscriminatorMetaData;
@@ -151,7 +151,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
                 String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
                 String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
-                Object key = ((OID)op.getInternalObjectId()).getKeyValue();
+                Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId());
                 try
                 {
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
