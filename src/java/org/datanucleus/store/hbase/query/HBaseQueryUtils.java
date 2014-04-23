@@ -37,7 +37,6 @@ import org.datanucleus.FetchPlan;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.identity.IdentityUtils;
-import org.datanucleus.identity.OID;
 import org.datanucleus.identity.OIDFactory;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -336,7 +335,7 @@ class HBaseQueryUtils
         String dsidColName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
         String dsidFamilyName = HBaseUtils.getFamilyNameForColumnName(dsidColName, tableName);
         String dsidColumnName = HBaseUtils.getQualifierNameForColumnName(dsidColName);
-        OID id = null;
+        Object id = null;
         try
         {
             byte[] bytes = result.getValue(dsidFamilyName.getBytes(), dsidColumnName.getBytes());
