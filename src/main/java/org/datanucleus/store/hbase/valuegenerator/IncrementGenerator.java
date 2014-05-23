@@ -37,6 +37,7 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.store.hbase.HBaseStoreManager;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
+import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
 /**
@@ -102,7 +103,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                     {
                         if (!storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
-                            throw new NucleusUserException(LOCALISER.msg("040011", tableName));
+                            throw new NucleusUserException(Localiser.msg("040011", tableName));
                         }
 
                         NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableName + "'");

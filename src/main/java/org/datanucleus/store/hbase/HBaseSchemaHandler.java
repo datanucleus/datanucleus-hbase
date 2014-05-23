@@ -41,9 +41,6 @@ import org.datanucleus.util.NucleusLogger;
  */
 public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
 {
-    protected static final Localiser LOCALISER = Localiser.getInstance(
-        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
-
     public HBaseSchemaHandler(StoreManager storeMgr)
     {
         super(storeMgr);
@@ -141,7 +138,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             {
                 public Object run() throws Exception
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaDelete.Class",
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaDelete.Class",
                         acmd.getFullClassName(), hTable.getNameAsString()));
                     hBaseAdmin.disableTable(hTable.getName());
                     hBaseAdmin.deleteTable(hTable.getName());

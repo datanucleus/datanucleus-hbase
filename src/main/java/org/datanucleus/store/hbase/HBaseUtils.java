@@ -68,10 +68,6 @@ import org.datanucleus.util.NucleusLogger;
 
 public class HBaseUtils
 {
-    /** Localiser for messages. */
-    protected static final Localiser LOCALISER = Localiser.getInstance(
-        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
-
     /**
      * Accessor for the default value specified for the provided member.
      * If no defaultValue is provided on the column then returns null.
@@ -299,12 +295,12 @@ public class HBaseUtils
                     {
                         if (validateOnly)
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.info(LOCALISER.msg("HBase.SchemaValidate.Class",
+                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class",
                                 acmd.getFullClassName(), tableName));
                         }
                         else if (storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class",
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class",
                                 acmd.getFullClassName(), tableName));
                             hTable = new HTableDescriptor(tableName);
                             hBaseAdmin.createTable(hTable);
@@ -326,12 +322,12 @@ public class HBaseUtils
             {
                 if (validateOnly)
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.info(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
+                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family",
                         tableName, tableName));
                 }
                 else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
                         tableName, tableName));
 
                     // Not sure this is good... This creates a default family even if the family is actually
@@ -363,12 +359,12 @@ public class HBaseUtils
                     {
                         if (validateOnly)
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family",
                                 tableName, familyName));
                         }
                         else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
                                 tableName, familyName));
                             HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
                             hTable.addFamily(hColumn);
@@ -434,12 +430,12 @@ public class HBaseUtils
                 {
                     if (validateOnly)
                     {
-                        NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
+                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family",
                             tableName, familyName));
                     }
                     else
                     {
-                        NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
+                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
                             tableName, familyName));
                         HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
                         hTable.addFamily(hColumn);

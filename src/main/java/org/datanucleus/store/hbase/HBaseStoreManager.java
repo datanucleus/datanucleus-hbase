@@ -44,9 +44,15 @@ import org.datanucleus.store.NucleusConnection;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.schema.SchemaAwareStoreManager;
+import org.datanucleus.util.Localiser;
 
 public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwareStoreManager
 {
+    static
+    {
+        Localiser.registerBundle("org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
+    }
+
     MetaDataListener metadataListener;
 
     private Configuration hbaseConfig; 

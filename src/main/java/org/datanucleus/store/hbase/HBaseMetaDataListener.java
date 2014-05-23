@@ -23,7 +23,6 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.IdentityStrategy;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataListener;
-import org.datanucleus.util.Localiser;
 
 /**
  * Listener for the load of metadata for classes.
@@ -31,10 +30,6 @@ import org.datanucleus.util.Localiser;
  */
 public class HBaseMetaDataListener implements MetaDataListener
 {
-    /** Localiser for messages. */
-    protected static final Localiser LOCALISER = Localiser.getInstance(
-        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
-
     private HBaseStoreManager storeManager;
 
     HBaseMetaDataListener(HBaseStoreManager storeManager)

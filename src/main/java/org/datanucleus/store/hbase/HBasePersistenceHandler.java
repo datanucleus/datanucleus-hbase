@@ -65,10 +65,6 @@ import org.datanucleus.util.StringUtils;
  */
 public class HBasePersistenceHandler extends AbstractPersistenceHandler
 {
-    /** Localiser for messages. */
-    protected static final Localiser LOCALISER_HBASE = Localiser.getInstance(
-        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
-
     public HBasePersistenceHandler(StoreManager storeMgr)
     {
         super(storeMgr);
@@ -125,7 +121,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         if (HBaseUtils.objectExistsInTable(op, table))
                         {
-                            throw new NucleusUserException(LOCALISER_HBASE.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
+                            throw new NucleusUserException(Localiser.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
                                 op.getObjectAsPrintable(), op.getInternalObjectId()));
                         }
                     }
@@ -139,8 +135,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.Insert.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Insert.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
             Put put = HBaseUtils.getPutForObject(op);
@@ -211,7 +206,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 op.setTransactionalVersion(nextVersion);
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE.debug(LOCALISER_HBASE.msg("HBase.Insert.ObjectPersistedWithVersion",
+                    NucleusLogger.DATASTORE.debug(Localiser.msg("HBase.Insert.ObjectPersistedWithVersion",
                         op.getObjectAsPrintable(), op.getInternalObjectId(), "" + nextVersion));
                 }
 
@@ -264,7 +259,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_NATIVE.debug(LOCALISER_HBASE.msg("HBase.Put",
+                NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put",
                     StringUtils.toJVMIDString(op.getObject()), tableName, put));
             }
             table.put(put);
@@ -277,8 +272,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.ExecutionTime", 
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
         }
         catch (NucleusException ne)
@@ -318,7 +312,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     }
                     fieldStr.append(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
                 }
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.Update.Start", 
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Update.Start", 
                     op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
             }
 
@@ -402,8 +396,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE_NATIVE.debug(LOCALISER_HBASE.msg("HBase.Put",
-                        StringUtils.toJVMIDString(op.getObject()), tableName, put));
+                    NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put", StringUtils.toJVMIDString(op.getObject()), tableName, put));
                 }
                 table.put(put);
                 if (ec.getStatistics() != null)
@@ -418,8 +411,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 // entire row to be deleted
                 if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE_NATIVE.debug(LOCALISER_HBASE.msg("HBase.Delete",
-                        StringUtils.toJVMIDString(op.getObject()), tableName, delete));
+                    NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Delete", StringUtils.toJVMIDString(op.getObject()), tableName, delete));
                 }
                 table.delete(delete);
                 if (ec.getStatistics() != null)
@@ -435,8 +427,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.ExecutionTime", 
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
         }
         catch (NucleusException ne)
@@ -501,8 +492,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
                     if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
                     {
-                        NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.Delete.Start", 
-                            op.getObjectAsPrintable(), op.getInternalObjectId()));
+                        NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
                     }
                     boolean deletable = true;
                     AbstractClassMetaData cmd = op.getClassMetaData();
@@ -550,8 +540,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
                 if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.ExecutionTime", 
-                        (System.currentTimeMillis() - startTime)));
+                    NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.ExecutionTime", (System.currentTimeMillis() - startTime)));
                 }
             }
             catch (NucleusException ne)
@@ -593,8 +582,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.Delete.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
             String tableName = storeMgr.getNamingFactory().getTableName(cmd);
@@ -615,8 +603,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             Delete delete = HBaseUtils.getDeleteForObject(op);
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_NATIVE.debug(LOCALISER_HBASE.msg("HBase.Delete",
-                    StringUtils.toJVMIDString(op.getObject()), tableName, delete));
+                NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Delete", StringUtils.toJVMIDString(op.getObject()), tableName, delete));
             }
             table.delete(delete);
             if (ec.getStatistics() != null)
@@ -628,8 +615,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_HBASE.msg("HBase.ExecutionTime", 
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
         }
         catch (NucleusException ne)
@@ -675,8 +661,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_RETRIEVE.debug(LOCALISER_HBASE.msg("HBase.Fetch.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("HBase.Fetch.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
             String tableName = storeMgr.getNamingFactory().getTableName(cmd);
@@ -730,8 +715,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_RETRIEVE.debug(LOCALISER_HBASE.msg("HBase.ExecutionTime",
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("HBase.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
             if (ec.getStatistics() != null)
             {

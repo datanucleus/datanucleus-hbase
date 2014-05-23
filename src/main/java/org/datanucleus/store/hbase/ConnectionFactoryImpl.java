@@ -33,10 +33,6 @@ import org.datanucleus.util.Localiser;
  */
 public class ConnectionFactoryImpl extends AbstractConnectionFactory
 {
-    /** Localiser for messages. */
-    protected static final Localiser LOCALISER_HBASE = Localiser.getInstance(
-        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
-
     private Configuration config;
 
     private HBaseConnectionPool connectionPool;
@@ -74,7 +70,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         String url = storeMgr.getConnectionURL();
         if (!url.startsWith("hbase"))
         {
-            throw new NucleusException(LOCALISER_HBASE.msg("HBase.URLInvalid", url));
+            throw new NucleusException(Localiser.msg("HBase.URLInvalid", url));
         }
 
         // Split the URL into local, or "host:port"
