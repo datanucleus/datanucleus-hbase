@@ -66,7 +66,7 @@ public class HBaseMetaDataListener implements MetaDataListener
 
         if (storeManager.getSchemaHandler().isAutoCreateTables() || storeManager.getSchemaHandler().isAutoCreateColumns())
         {
-            HBaseUtils.createSchemaForClass(storeManager, cmd, false);
+            ((HBaseSchemaHandler)storeManager.getSchemaHandler()).createSchemaForClass(storeManager, cmd, false);
         }
     }
 }

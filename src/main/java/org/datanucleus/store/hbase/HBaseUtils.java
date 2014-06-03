@@ -24,29 +24,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.NucleusContext;
-import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -54,17 +42,12 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
-import org.datanucleus.metadata.MetaDataUtils;
-import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.hbase.metadata.MetaDataExtensionParser;
 import org.datanucleus.store.schema.naming.ColumnType;
 import org.datanucleus.store.types.converters.TypeConverter;
-import org.datanucleus.util.Localiser;
-import org.datanucleus.util.NucleusLogger;
 
 public class HBaseUtils
 {
@@ -251,201 +234,6 @@ public class HBaseUtils
             columnName = columnName.substring(columnName.indexOf(":") + 1);
         }
         return columnName;
-    }
-
-    /**
-     * Create a schema in HBase. Do not make this method public, since it uses privileged actions.
-     * TODO Move to HBaseSchemaHandler
-     * @param storeMgr HBase StoreManager
-     * @param acmd Metadata for the class
-     * @param validateOnly Whether to only validate for existence and flag missing schema in the log
-     */
-    static void createSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData acmd,
-            final boolean validateOnly)
-    {
-        if (acmd.isEmbeddedOnly())
-        {
-            // No schema required since only ever embedded
-            return;
-        }
-
-        final String tableName = storeMgr.getNamingFactory().getTableName(acmd);
-        final Configuration config = storeMgr.getHbaseConfig();
-        try
-        {
-            final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
-                {
-                    return new HBaseAdmin(config);
-                }
-            });
-
-            // Find table descriptor, if not existing, create it
-            final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
-                {
-                    HTableDescriptor hTable = null;
-                    try
-                    {
-                        hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
-                    }
-                    catch (TableNotFoundException ex)
-                    {
-                        if (validateOnly)
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class",
-                                acmd.getFullClassName(), tableName));
-                        }
-                        else if (storeMgr.getSchemaHandler().isAutoCreateTables())
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class",
-                                acmd.getFullClassName(), tableName));
-                            hTable = new HTableDescriptor(tableName);
-                            hBaseAdmin.createTable(hTable);
-                        }
-                    }
-                    return hTable;
-                }
-            });
-
-            // No such table & no auto-create -> exit
-            if (hTable == null)
-            {
-                return;
-            }
-            MetaDataExtensionParser ep = new MetaDataExtensionParser(acmd);
-
-            boolean modified = false;
-            if (!hTable.hasFamily(tableName.getBytes()))
-            {
-                if (validateOnly)
-                {
-                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family",
-                        tableName, tableName));
-                }
-                else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
-                {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
-                        tableName, tableName));
-
-                    // Not sure this is good... This creates a default family even if the family is actually
-                    // defined in the @Column(name="family:fieldname") annotation. In other words, it is possible
-                    // to get a family with no fields.
-                    HColumnDescriptor hColumn = new HColumnDescriptor(tableName);
-                    hTable.addFamily(hColumn);
-                    modified = true;
-                }
-            }
-
-            int[] fieldNumbers = acmd.getAllMemberPositions();
-            ClassLoaderResolver clr = storeMgr.getNucleusContext().getClassLoaderResolver(null);
-            Set<String> familyNames = new HashSet<String>();
-            for (int fieldNumber : fieldNumbers)
-            {
-                AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
-                RelationType relationType = mmd.getRelationType(clr);
-                if (RelationType.isRelationSingleValued(relationType) && 
-                     MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, mmd, relationType, null))
-                {
-                    createSchemaForEmbeddedMember(storeMgr, hTable, mmd, clr, validateOnly);
-                }
-                else
-                {
-                    String familyName = getFamilyName(acmd, fieldNumber, tableName);
-                    familyNames.add(familyName);
-                    if (!hTable.hasFamily(familyName.getBytes()))
-                    {
-                        if (validateOnly)
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family",
-                                tableName, familyName));
-                        }
-                        else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
-                                tableName, familyName));
-                            HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
-                            hTable.addFamily(hColumn);
-                            modified = true;
-                        }
-                    }
-
-
-                }
-            }
-
-            if (!validateOnly && ep.hasExtensions())
-            {
-                for (String familyName : familyNames)
-                {
-                    modified |= ep.applyExtensions(hTable, familyName);
-                }
-            }
-
-            if (modified)
-            {
-                AccessController.doPrivileged(new PrivilegedExceptionAction()
-                {
-                    public Object run() throws Exception
-                    {
-                        hBaseAdmin.disableTable(hTable.getName());
-                        hBaseAdmin.modifyTable(hTable.getName(), hTable);
-                        hBaseAdmin.enableTable(hTable.getName());
-                        return null;
-                    }
-                });
-            }
-
-        }
-        catch (PrivilegedActionException e)
-        {
-            throw new NucleusDataStoreException(e.getMessage(), e.getCause());
-        }
-    }
-
-    static boolean createSchemaForEmbeddedMember(HBaseStoreManager storeMgr, HTableDescriptor hTable,
-            AbstractMemberMetaData mmd, ClassLoaderResolver clr, boolean validateOnly)
-    {
-        boolean modified = false;
-
-        String tableName = hTable.getNameAsString();
-        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-        AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-        for (int j=0;j<embmmds.length;j++)
-        {
-            AbstractMemberMetaData embMmd = embmmds[j];
-            RelationType embRelationType = embMmd.getRelationType(clr);
-            if (RelationType.isRelationSingleValued(embRelationType) && 
-                MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, embMmd, embRelationType, mmd))
-            {
-                // Recurse
-                return createSchemaForEmbeddedMember(storeMgr, hTable, embMmd, clr, validateOnly);
-            }
-            else
-            {
-                String familyName = HBaseUtils.getFamilyName(embMmd, j, tableName);
-                if (!hTable.hasFamily(familyName.getBytes()))
-                {
-                    if (validateOnly)
-                    {
-                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family",
-                            tableName, familyName));
-                    }
-                    else
-                    {
-                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
-                            tableName, familyName));
-                        HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
-                        hTable.addFamily(hColumn);
-                        modified = true;
-                    }
-                }
-            }
-        }
-
-        return modified;
     }
 
     /**
@@ -659,9 +447,7 @@ public class HBaseUtils
      */
     static byte[] getRowKeyForPkValue(Object[] pkValues, NucleusContext nucCtx) throws IOException
     {
-        boolean useSerialisation =
-            nucCtx.getConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
-
+        boolean useSerialisation = nucCtx.getConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
         if (pkValues.length == 1 && !useSerialisation)
         {
             Object pkValue = pkValues[0];

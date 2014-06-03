@@ -153,15 +153,15 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         }
 
         // Filter out any "simple" type classes
-        String[] filteredClassNames = 
-            getNucleusContext().getTypeManager().filterOutSupportedSecondClassNames(classNames);
+        String[] filteredClassNames = getNucleusContext().getTypeManager().filterOutSupportedSecondClassNames(classNames);
 
         // Find the ClassMetaData for these classes and all referenced by these classes
+        Set<String> clsNameSet = new HashSet<String>();
         Iterator iter = getMetaDataManager().getReferencedClasses(filteredClassNames, clr).iterator();
         while (iter.hasNext())
         {
             ClassMetaData cmd = (ClassMetaData)iter.next();
-            if (cmd.getPersistenceModifier() == ClassPersistenceModifier.PERSISTENCE_CAPABLE)
+            if (cmd.getPersistenceModifier() == ClassPersistenceModifier.PERSISTENCE_CAPABLE && !cmd.isEmbeddedOnly() && !cmd.isAbstract())
             {
                 if (!storeDataMgr.managesClass(cmd.getFullClassName()))
                 {
@@ -170,14 +170,12 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
                     {
                         registerStoreData(newStoreData(cmd, clr));
                     }
-
-                    if (getSchemaHandler().isAutoCreateTables() || getSchemaHandler().isAutoCreateColumns())
-                    {
-                        HBaseUtils.createSchemaForClass(this, cmd, false);
-                    }
+                    clsNameSet.add(cmd.getFullClassName());
                 }
             }
         }
+
+        getSchemaHandler().createSchemaForClasses(clsNameSet, null, null);
     }
 
     /**
