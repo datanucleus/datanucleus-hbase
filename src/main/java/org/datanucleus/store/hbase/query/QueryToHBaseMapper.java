@@ -17,11 +17,12 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.query;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
@@ -87,7 +88,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
      */
     boolean precompilable = true;
 
-    Stack<HBaseExpression> stack = new Stack();
+    Deque<HBaseExpression> stack = new ArrayDeque<HBaseExpression>();
 
     public QueryToHBaseMapper(QueryCompilation compilation, Map parameters, AbstractClassMetaData cmd,
             ExecutionContext ec, Query q)
