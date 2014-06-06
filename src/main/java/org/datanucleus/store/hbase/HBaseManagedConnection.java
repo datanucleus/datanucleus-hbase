@@ -14,6 +14,7 @@ limitations under the License.
 
 Contributors :
 2012 Andy Jefferson - adapted to not close tables when ref count is back to 0 when in txn
+2014 Andy Jefferson - updated to latest HBase API without HTablePool
     ...
 ***********************************************************************/
 package org.datanucleus.store.hbase;
@@ -24,8 +25,8 @@ import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.store.connection.AbstractManagedConnection;
 import org.datanucleus.store.connection.ManagedConnectionResourceListener;
@@ -35,7 +36,7 @@ import org.datanucleus.store.connection.ManagedConnectionResourceListener;
  */
 public class HBaseManagedConnection extends AbstractManagedConnection
 {
-    private HTablePool tablePool;
+    private HConnection hconn;
 
     /** Cache of HTables used by this connection. */
     private Map<String, HTableInterface> tables;
@@ -46,9 +47,9 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 
     private boolean isDisposed = false;
 
-    public HBaseManagedConnection(HTablePool pool)
+    public HBaseManagedConnection(HConnection hconn)
     {
-    	this.tablePool = pool;
+    	this.hconn = hconn;
     	this.tables = new HashMap<String, HTableInterface>();
     	disableExpirationTime();
     }
@@ -65,12 +66,12 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         {
             try
             {
-                table = tablePool.getTable(tableName);
+                table = hconn.getTable(tableName);
                 tables.put(tableName, table);
             }
-        	catch (RuntimeException e)
+        	catch (Exception e)
         	{
-                throw new NucleusDataStoreException(e.getMessage(),e);
+                throw new NucleusDataStoreException("Exception obtaining HTableInterface from HConnection for table=" + tableName, e);
             }
         }
         return table;
@@ -83,11 +84,6 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 
     public void close()
     {
-        if (tables.size() == 0)
-        {
-            return;
-        }
-
         for (ManagedConnectionResourceListener listener : listeners) 
         {
             listener.managedConnectionPreClose();
@@ -98,17 +94,19 @@ public class HBaseManagedConnection extends AbstractManagedConnection
             Map<String, HTableInterface> oldtables = tables;
             tables = new HashMap<String, HTableInterface>();
 
-            for (HTableInterface table : oldtables.values())
+            try
             {
-                try
+                for (HTableInterface table : oldtables.values())
                 {
                     table.close();
                 }
-                catch (IOException e)
-                {
-                    // TODO: There can be multiple exceptions, so wrap them in together
-                    throw new NucleusDataStoreException(e.getMessage(),e);
-                }
+
+                // Close the HConnection
+                dispose();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusDataStoreException("Exception thrown while closing HTable(s) for transaction and associated HConnection", e);
             }
         }
         finally
@@ -158,6 +156,17 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     public void dispose()
     {
     	isDisposed = true;
+    	if (!hconn.isClosed())
+    	{
+    	    try
+            {
+                hconn.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusDataStoreException("Exception thrown closing HConnection", e);
+            }
+    	}
     }
 
     public boolean isDisposed()

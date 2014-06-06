@@ -24,6 +24,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Pool of HBaseManagedConnection, so that we only have one per thread of any application per PMF/EMF.
+ */
 public class HBaseConnectionPool
 {
     private final List<HBaseManagedConnection> connections;

@@ -20,8 +20,11 @@ package org.datanucleus.store.hbase;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.datanucleus.ExecutionContext;
+import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.AbstractConnectionFactory;
@@ -36,8 +39,6 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     private Configuration config;
 
     private HBaseConnectionPool connectionPool;
-
-    private HTablePool tablePool;
 
     private int poolMinEvictableIdleTimeMillis = 0;
 
@@ -97,7 +98,6 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
 
         int maxSize = storeMgr.getIntProperty("datanucleus.hbase.tablePoolMaxSize");
         maxSize = maxSize > 0 ? maxSize : Integer.MAX_VALUE;
-        tablePool = new HTablePool(config, maxSize);
     }
 
     /**
@@ -112,9 +112,17 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         HBaseManagedConnection managedConnection = connectionPool.getPooledConnection();
         if (managedConnection == null) 
         {
-            managedConnection = new HBaseManagedConnection(tablePool);
-            managedConnection.setIdleTimeoutMills(poolMinEvictableIdleTimeMillis);
-            connectionPool.registerConnection(managedConnection);
+            try
+            {
+                HConnection hconn = HConnectionManager.createConnection(config);
+                managedConnection = new HBaseManagedConnection(hconn);
+                managedConnection.setIdleTimeoutMills(poolMinEvictableIdleTimeMillis);
+                connectionPool.registerConnection(managedConnection);
+            }
+            catch (ZooKeeperConnectionException e)
+            {
+                throw new NucleusDataStoreException("Exception thrown obtaining HConnection", e);
+            }
         }
         return managedConnection;
     }
