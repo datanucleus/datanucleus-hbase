@@ -41,7 +41,6 @@ import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.DiscriminatorStrategy;
-import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
@@ -53,6 +52,8 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
+import org.datanucleus.store.schema.table.Column;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 
@@ -102,8 +103,7 @@ class HBaseQueryUtils
      * @return List of objects of the candidate type
      */
     static private List getObjectsOfType(final ExecutionContext ec, final HBaseManagedConnection mconn,
-            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fp, final Filter filter,
-            final StoreManager storeMgr)
+            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fp, final Filter filter, final StoreManager storeMgr)
     {
         List results = new ArrayList();
 
@@ -133,14 +133,21 @@ class HBaseQueryUtils
                     {
                         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fpMembers[i]);
                         RelationType relationType = mmd.getRelationType(clr);
-                        if (RelationType.isRelationSingleValued(relationType) && mmd.isEmbedded())
+                        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
                         {
-                            addColumnsToScanForEmbeddedMember(scan, mmd, tableName, ec);
+                            if (RelationType.isRelationSingleValued(relationType))
+                            {
+                                // 1-1 embedded
+                                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
+                                embMmds.add(mmd);
+                                addColumnsToScanForEmbeddedMember(scan, embMmds, table, ec);
+                            }
                         }
                         else
                         {
-                            byte[] familyName = HBaseUtils.getFamilyName(cmd, fpMembers[i], tableName).getBytes();
-                            byte[] qualifName = HBaseUtils.getQualifierName(cmd, fpMembers[i]).getBytes();
+                            Column col = table.getMemberColumnMappingForMember(mmd).getColumn(0); // TODO Support multicol mapping
+                            byte[] familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), tableName).getBytes();
+                            byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(col.getName()).getBytes();
                             scan.addColumn(familyName, qualifName);
                         }
                     }
@@ -254,7 +261,7 @@ class HBaseQueryUtils
             }
         }
 
-        final FieldManager fm = new FetchFieldManager(ec, cmd, result, tableName);
+        final FieldManager fm = new FetchFieldManager(ec, cmd, result, table);
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, fm);
 
         Object pc = ec.findObject(id, 
@@ -355,7 +362,7 @@ class HBaseQueryUtils
             throw new NucleusException(e.getMessage(), e);
         }
 
-        final FieldManager fm = new FetchFieldManager(ec, cmd, result, tableName);
+        final FieldManager fm = new FetchFieldManager(ec, cmd, result, table);
         Object pc = ec.findObject(id, 
             new FieldValues()
             {
@@ -429,7 +436,7 @@ class HBaseQueryUtils
             }
         }
 
-        final FieldManager fm = new FetchFieldManager(ec, cmd, result, tableName);
+        final FieldManager fm = new FetchFieldManager(ec, cmd, result, table);
         SCOID id = new SCOID(cmd.getFullClassName());
         Object pc = ec.findObject(id, 
             new FieldValues()
@@ -478,24 +485,28 @@ class HBaseQueryUtils
         return pc;
     }
 
-    private static void addColumnsToScanForEmbeddedMember(Scan scan, AbstractMemberMetaData mmd, String tableName, ExecutionContext ec)
+    private static void addColumnsToScanForEmbeddedMember(Scan scan, List<AbstractMemberMetaData> embMmds, Table table, ExecutionContext ec)
     {
-        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+        AbstractMemberMetaData lastMmd = embMmds.get(embMmds.size()-1);
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-        for (int i=0;i<embmmds.length;i++)
+        AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(lastMmd.getTypeName(), clr);
+        int[] embMmdPosns = embCmd.getAllMemberPositions();
+        for (int i=0;i<embMmdPosns.length;i++)
         {
-            AbstractMemberMetaData embMmd = embmmds[i];
+            AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(i);
+            List<AbstractMemberMetaData> subEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
+            subEmbMmds.add(embMmd);
             RelationType relationType = embMmd.getRelationType(clr);
-            if ((relationType == RelationType.ONE_TO_ONE_BI || relationType == RelationType.ONE_TO_ONE_UNI) && embMmd.isEmbedded())
+            MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds);
+            if (RelationType.isRelationSingleValued(relationType))
             {
-                addColumnsToScanForEmbeddedMember(scan, embMmd, tableName, ec);
+                addColumnsToScanForEmbeddedMember(scan, subEmbMmds, table, ec);
             }
             else
             {
-                byte[] familyName = HBaseUtils.getFamilyName(mmd, i, tableName).getBytes();
-                byte[] qualifName = HBaseUtils.getQualifierName(mmd, i).getBytes();
-                scan.addColumn(familyName, qualifName);
+                String familyName = HBaseUtils.getFamilyNameForColumnName(mapping.getColumn(0).getName(), table.getName());
+                String qualifName = HBaseUtils.getQualifierNameForColumnName(mapping.getColumn(0).getName());
+                scan.addColumn(familyName.getBytes(), qualifName.getBytes());
             }
         }
     }

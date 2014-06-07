@@ -18,6 +18,7 @@ Contributors:
 package org.datanucleus.store.hbase.query;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.query.compiler.CompilationComponent;
 import org.datanucleus.query.compiler.QueryCompilation;
@@ -43,6 +45,7 @@ import org.datanucleus.store.hbase.query.expression.HBaseExpression;
 import org.datanucleus.store.hbase.query.expression.HBaseFieldExpression;
 import org.datanucleus.store.hbase.query.expression.HBaseLiteral;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
@@ -531,28 +534,25 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             return null;
         }
 
+        List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
+        AbstractMemberMetaData embMmd = null;
+        boolean firstTuple = true;
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractClassMetaData cmd = candidateCmd;
-        AbstractMemberMetaData prevMmd = null;
         Table table = ec.getStoreManager().getStoreDataForClass(candidateCmd.getFullClassName()).getTable();
-        String tableName = table.getName();
 
         Iterator<String> iter = tuples.iterator();
         while (iter.hasNext())
         {
             String name = iter.next();
-            if (name.equals(candidateAlias))
+            if (firstTuple && name.equals(candidateAlias))
             {
                 cmd = candidateCmd;
             }
             else
             {
                 AbstractMemberMetaData mmd = cmd.getMetaDataForMember(name);
-                if (prevMmd != null)
-                {
-                    mmd = prevMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
-                }
-                RelationType relationType = mmd.getRelationType(clr);
+                RelationType relationType = mmd.getRelationType(ec.getClassLoaderResolver());
                 if (relationType == RelationType.NONE)
                 {
                     if (iter.hasNext())
@@ -561,41 +561,62 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                             StringUtils.collectionToString(tuples) + " yet " + name + " is a non-relation field!");
                     }
 
-                    if (prevMmd != null)
+                    Column col = null;
+                    if (embMmd != null)
                     {
-                        int fieldNumber = cmd.getMetaDataForMember(name).getAbsoluteFieldNumber();
-                        String familyName = HBaseUtils.getFamilyName(prevMmd, fieldNumber, tableName);
-                        String qualifName = HBaseUtils.getQualifierName(prevMmd, fieldNumber);
-                        return new PrimaryDetails(mmd.getType(), familyName, qualifName);
+                        // Get property name for field of embedded object
+                        embMmds.add(mmd);
+                        col = table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0);
                     }
                     else
                     {
-                        String familyName = HBaseUtils.getFamilyName(cmd, mmd.getAbsoluteFieldNumber(), tableName);
-                        String qualifName = HBaseUtils.getQualifierName(cmd, mmd.getAbsoluteFieldNumber());
-                        return new PrimaryDetails(mmd.getType(), familyName, qualifName);
+                        col = table.getMemberColumnMappingForMember(mmd).getColumn(0);
                     }
+                    String familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
+                    String qualifName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                    return new PrimaryDetails(mmd.getType(), familyName, qualifName);
                 }
                 else
                 {
-                    if (mmd.isEmbedded() && RelationType.isRelationSingleValued(relationType) && iter.hasNext())
+                    boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
+                        embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
+
+                    if (embedded)
                     {
-                        // Embedded field with subsequent field
-                        cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
-                        prevMmd = mmd;
+                        if (RelationType.isRelationSingleValued(relationType))
+                        {
+                            cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
+                            if (embMmd != null)
+                            {
+                                embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
+                            }
+                            else
+                            {
+                                embMmd = mmd;
+                            }
+                            embMmds.add(embMmd);
+                        }
+                        else if (RelationType.isRelationMultiValued(relationType))
+                        {
+                            throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
+                        }
                     }
                     else
                     {
+                        // Not embedded
+                        embMmds.clear();
+
                         if (compileComponent == CompilationComponent.FILTER)
                         {
                             filterComplete = false;
                         }
-                        NucleusLogger.QUERY.debug("Query has reference to " +
-                            StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
+                        NucleusLogger.QUERY.debug("Query has reference to " + StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
                             " is not persisted into this document, so unexecutable in the datastore");
                         return null;
                     }
                 }
             }
+            firstTuple = false;
         }
 
         return null;

@@ -22,6 +22,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -33,14 +34,11 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
-import org.datanucleus.metadata.MetaDataUtils;
-import org.datanucleus.metadata.RelationType;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.metadata.MetaDataExtensionParser;
 import org.datanucleus.store.schema.AbstractStoreSchemaHandler;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.CompleteClassTable;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
@@ -153,57 +151,43 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             {
                 if (validateOnly)
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family",
-                        tableName, tableName));
+                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family", tableName, tableName));
                 }
                 else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
-                        tableName, tableName));
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableName, tableName));
 
-                    // Not sure this is good... This creates a default family even if the family is actually
-                    // defined in the @Column(name="family:fieldname") annotation. In other words, it is possible
-                    // to get a family with no fields.
+                    // Not sure this is good. This creates a default family even if the family is actually defined in the @Column(name="family:fieldname") annotation. 
+                    // i.e it is possible to get a family with no fields.
                     HColumnDescriptor hColumn = new HColumnDescriptor(tableName);
                     hTable.addFamily(hColumn);
                     modified = true;
                 }
             }
 
-            int[] fieldNumbers = cmd.getAllMemberPositions();
-            ClassLoaderResolver clr = storeMgr.getNucleusContext().getClassLoaderResolver(null);
+            List<Column> cols = table.getColumns();
             Set<String> familyNames = new HashSet<String>();
-            for (int fieldNumber : fieldNumbers)
+            for (Column col : cols)
             {
-                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
-                RelationType relationType = mmd.getRelationType(clr);
-                if (RelationType.isRelationSingleValued(relationType) && 
-                     MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, mmd, relationType, null))
+                String colName = col.getName();
+                String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
+                if (!familyNames.contains(familyName))
                 {
-                    createSchemaForEmbeddedMember(storeMgr, hTable, mmd, clr, validateOnly);
-                }
-                else
-                {
-                    String familyName = HBaseUtils.getFamilyName(cmd, fieldNumber, tableName);
                     familyNames.add(familyName);
                     if (!hTable.hasFamily(familyName.getBytes()))
                     {
                         if (validateOnly)
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family",
-                                tableName, familyName));
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family", tableName, familyName));
                         }
                         else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family",
-                                tableName, familyName));
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableName, familyName));
                             HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
                             hTable.addFamily(hColumn);
                             modified = true;
                         }
                     }
-
-
                 }
             }
 
@@ -234,46 +218,6 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         {
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
-    }
-
-    boolean createSchemaForEmbeddedMember(HBaseStoreManager storeMgr, HTableDescriptor hTable, AbstractMemberMetaData mmd, ClassLoaderResolver clr, boolean validateOnly)
-    {
-        boolean modified = false;
-
-        String tableName = hTable.getNameAsString();
-        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-        AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-        for (int j=0;j<embmmds.length;j++)
-        {
-            AbstractMemberMetaData embMmd = embmmds[j];
-            RelationType embRelationType = embMmd.getRelationType(clr);
-            if (RelationType.isRelationSingleValued(embRelationType) && 
-                MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, embMmd, embRelationType, mmd))
-            {
-                // Recurse
-                return createSchemaForEmbeddedMember(storeMgr, hTable, embMmd, clr, validateOnly);
-            }
-            else
-            {
-                String familyName = HBaseUtils.getFamilyName(embMmd, j, tableName);
-                if (!hTable.hasFamily(familyName.getBytes()))
-                {
-                    if (validateOnly)
-                    {
-                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family", tableName, familyName));
-                    }
-                    else
-                    {
-                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableName, familyName));
-                        HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
-                        hTable.addFamily(hColumn);
-                        modified = true;
-                    }
-                }
-            }
-        }
-
-        return modified;
     }
 
     /* (non-Javadoc)
@@ -342,6 +286,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                     }
                     catch (TableNotFoundException ex)
                     {
+                        // TODO Why create it if we are trying to delete it????
                         hTable = new HTableDescriptor(tableName);
                         hBaseAdmin.createTable(hTable);
                     }

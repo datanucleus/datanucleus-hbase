@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.client.Delete;
@@ -39,45 +40,63 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractStoreFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.schema.table.Column;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.TypeManager;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.store.types.converters.TypeConverterHelper;
+import org.datanucleus.util.ClassUtils;
 
+/**
+ * FieldManager to use for storing values into HBase from a managed persistable object.
+ */
 public class StoreFieldManager extends AbstractStoreFieldManager
 {
-    Put put;
-    Delete delete;
-    String tableName;
+    Table table;
 
-    public StoreFieldManager(ObjectProvider op, Put put, Delete delete, boolean insert, String tableName)
+    Put put;
+
+    Delete delete;
+
+    public StoreFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, Put put, Delete delete, boolean insert, Table table)
+    {
+        super(ec, cmd, insert);
+        this.put = put;
+        this.delete = delete;
+        this.table = table;
+    }
+
+    public StoreFieldManager(ObjectProvider op, Put put, Delete delete, boolean insert, Table table)
     {
         super(op, insert);
 
         this.put = put;
         this.delete = delete;
-        this.tableName = tableName;
+        this.table = table;
+    }
+
+    protected MemberColumnMapping getColumnMapping(int fieldNumber)
+    {
+        return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
     protected String getFamilyName(int fieldNumber)
     {
-        return HBaseUtils.getFamilyName(cmd, fieldNumber, tableName);
+        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
+        return HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
     }
 
     protected String getQualifierName(int fieldNumber)
     {
-        return HBaseUtils.getQualifierName(cmd, fieldNumber);
-    }
-
-    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
-    {
-        return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
+        return HBaseUtils.getQualifierNameForColumnName(col.getName());
     }
 
     public void storeBooleanField(int fieldNumber, boolean value)
@@ -88,8 +107,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeBooleanInternal(mmd, familyName, qualifName, value);
+        storeBooleanInternal(familyName, qualifName, value, false);
     }
 
     public void storeByteField(int fieldNumber, byte value)
@@ -100,8 +118,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeByteInternal(mmd, familyName, qualifName, value);
+        storeByteInternal(familyName, qualifName, value, false);
     }
 
     public void storeCharField(int fieldNumber, char value)
@@ -112,8 +129,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeCharInternal(mmd, familyName, qualifName, value);
+        storeCharInternal(familyName, qualifName, value, false);
     }
 
     public void storeDoubleField(int fieldNumber, double value)
@@ -124,8 +140,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeDoubleInternal(mmd, familyName, qualifName, value);
+        storeDoubleInternal(familyName, qualifName, value, false);
     }
 
     public void storeFloatField(int fieldNumber, float value)
@@ -136,8 +151,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeFloatInternal(mmd, familyName, qualifName, value);
+        storeFloatInternal(familyName, qualifName, value, false);
     }
 
     public void storeIntField(int fieldNumber, int value)
@@ -148,8 +162,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeIntInternal(mmd, familyName, qualifName, value);
+        storeIntInternal(familyName, qualifName, value, false);
     }
 
     public void storeLongField(int fieldNumber, long value)
@@ -160,8 +173,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeLongInternal(mmd, familyName, qualifName, value);
+        storeLongInternal(familyName, qualifName, value, false);
     }
 
     public void storeShortField(int fieldNumber, short value)
@@ -172,8 +184,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        storeShortInternal(mmd, familyName, qualifName, value);
+        storeShortInternal(familyName, qualifName, value, false);
     }
 
     public void storeStringField(int fieldNumber, String value)
@@ -190,53 +201,75 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-            if (mmd.isSerialized())
-            {
-                writeObjectField(familyName, qualifName, value);
-            }
-            else
-            {
-                put.add(familyName.getBytes(), qualifName.getBytes(), value.getBytes());
-            }
+            // TODO This needs to cater for embedded subclass case
+            // writeObjectField(familyName, qualifName, value);
+            put.add(familyName.getBytes(), qualifName.getBytes(), value.getBytes());
         }
     }
 
     public void storeObjectField(int fieldNumber, Object value)
     {
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         if (!isStorable(mmd))
         {
             return;
         }
 
         RelationType relationType = mmd.getRelationType(clr);
-        if (RelationType.isRelationSingleValued(relationType) && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
+        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
         {
-            // Embedded PC object
-            Class embcls = mmd.getType();
-            AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
-            if (embcmd != null) 
+            // Embedded field
+            if (RelationType.isRelationSingleValued(relationType))
             {
+                // Embedded PC
+                AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+                int[] embMmdPosns = embCmd.getAllMemberPositions();
+                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
+                embMmds.add(mmd);
                 if (value == null)
                 {
-                    deleteColumnsForEmbeddedMember(mmd, clr, ec);
+                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(ec, embCmd, put, delete, insert, embMmds, table);
+                    for (int i = 0; i < embMmdPosns.length; i++)
+                    {
+                        AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(embMmdPosns[i]);
+                        if (String.class.isAssignableFrom(embMmd.getType()) || embMmd.getType().isPrimitive() || ClassUtils.isPrimitiveWrapperType(mmd.getTypeName()))
+                        {
+                            // Remove property for any primitive/wrapper/String fields
+                            List<AbstractMemberMetaData> colEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
+                            colEmbMmds.add(embMmd);
+                            MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(colEmbMmds);
+                            Column col = mapping.getColumn(0);
+                            String colFamName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
+                            String colQualName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                            delete.deleteColumn(colFamName.getBytes(), colQualName.getBytes());
+                        }
+                        else if (Object.class.isAssignableFrom(embMmd.getType()))
+                        {
+                            storeEmbFM.storeObjectField(embMmdPosns[i], null);
+                        }
+                    }
                     return;
                 }
 
-                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, mmd, tableName, insert);
-                embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
+                ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
+                FieldManager ffm = new StoreEmbeddedFieldManager(embOP, put, delete, insert, embMmds, table);
+                embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
             }
             else
             {
-                throw new NucleusUserException("Field " + mmd.getFullFieldName() +
-                    " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
+                // Embedded collection/map/array
+                throw new NucleusUserException("Field " + mmd.getFullFieldName() + " specified as embedded but field of this type not suppported. Mark as not persistent? or not embedded?");
             }
         }
 
+        storeNonEmbeddedObjectField(mmd, relationType, clr, value);
+    }
+
+    protected void storeNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Object value)
+    {
+        int fieldNumber = mmd.getAbsoluteFieldNumber();
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         if (value == null)
@@ -366,63 +399,63 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         }
                         else if (datastoreType == Boolean.class)
                         {
-                            storeBooleanInternal(mmd, familyName, qualifName, (Boolean)value);
+                            storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
                             return;
                         }
                         else if (datastoreType == Double.class)
                         {
-                            storeDoubleInternal(mmd, familyName, qualifName, (Double)value);
+                            storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
                             return;
                         }
                         else if (datastoreType == Integer.class)
                         {
-                            storeIntInternal(mmd, familyName, qualifName, (Integer)value);
+                            storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
                             return;
                         }
                         else if (datastoreType == Long.class)
                         {
-                            storeLongInternal(mmd, familyName, qualifName, (Long)value);
+                            storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
                             return;
                         }
                     }
                     if (Boolean.class.isAssignableFrom(value.getClass()))
                     {
-                        storeBooleanInternal(mmd, familyName, qualifName, (Boolean)value);
+                        storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
                         return;
                     }
                     else if (Byte.class.isAssignableFrom(value.getClass()))
                     {
-                        storeByteInternal(mmd, familyName, qualifName, (Byte)value);
+                        storeByteInternal(familyName, qualifName, (Byte)value, mmd.isSerialized());
                         return;
                     }
                     else if (Character.class.isAssignableFrom(value.getClass()))
                     {
-                        storeCharInternal(mmd, familyName, qualifName, (Character)value);
+                        storeCharInternal(familyName, qualifName, (Character)value, mmd.isSerialized());
                         return;
                     }
                     else if (Double.class.isAssignableFrom(value.getClass()))
                     {
-                        storeDoubleInternal(mmd, familyName, qualifName, (Double)value);
+                        storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
                         return;
                     }
                     else if (Float.class.isAssignableFrom(value.getClass()))
                     {
-                        storeFloatInternal(mmd, familyName, qualifName, (Float)value);
+                        storeFloatInternal(familyName, qualifName, (Float)value, mmd.isSerialized());
                         return;
                     }
                     else if (Integer.class.isAssignableFrom(value.getClass()))
                     {
-                        storeIntInternal(mmd, familyName, qualifName, (Integer)value);
+                        storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
                         return;
                     }
                     else if (Long.class.isAssignableFrom(value.getClass()))
                     {
-                        storeLongInternal(mmd, familyName, qualifName, (Long)value);
+                        storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
                         return;
                     }
                     else if (Short.class.isAssignableFrom(value.getClass()))
                     {
-                        storeShortInternal(mmd, familyName, qualifName, (Short)value);
+                        storeShortInternal(familyName, qualifName, (Short)value, mmd.isSerialized());
                         return;
                     }
                     else if (Enum.class.isAssignableFrom(value.getClass()))
@@ -479,36 +512,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    protected void deleteColumnsForEmbeddedMember(AbstractMemberMetaData mmd, ClassLoaderResolver clr,
-            ExecutionContext ec)
+    private void storeBooleanInternal(String familyName, String columnName, boolean value, boolean serialised)
     {
-        Class embcls = mmd.getType();
-        AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
-        if (embcmd != null)
-        {
-            EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-            AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-            for (int i=0;i<embmmds.length;i++)
-            {
-                RelationType relationType = embmmds[i].getRelationType(clr);
-                if (RelationType.isRelationSingleValued(relationType) && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, embmmds[i], relationType, mmd))
-                {
-                    deleteColumnsForEmbeddedMember(embmmds[i], clr, ec);
-                }
-                else
-                {
-                    String familyName = HBaseUtils.getFamilyName(mmd, i, tableName);
-                    String columnName = HBaseUtils.getQualifierName(mmd, i);
-                    delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
-                }
-            }
-            return;
-        }
-    }
-
-    private void storeBooleanInternal(AbstractMemberMetaData mmd, String familyName, String columnName, boolean value)
-    {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -531,14 +537,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    private void storeByteInternal(AbstractMemberMetaData mmd, String familyName, String columnName, byte value)
+    private void storeByteInternal(String familyName, String columnName, byte value, boolean serialised)
     {
         put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
     }
 
-    private void storeCharInternal(AbstractMemberMetaData mmd, String familyName, String columnName, char value)
+    private void storeCharInternal(String familyName, String columnName, char value, boolean serialised)
     {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -561,9 +567,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    private void storeDoubleInternal(AbstractMemberMetaData mmd, String familyName, String columnName, double value)
+    private void storeDoubleInternal(String familyName, String columnName, double value, boolean serialised)
     {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -586,9 +592,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    private void storeFloatInternal(AbstractMemberMetaData mmd, String familyName, String columnName, float value)
+    private void storeFloatInternal(String familyName, String columnName, float value, boolean serialised)
     {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -611,9 +617,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    private void storeIntInternal(AbstractMemberMetaData mmd, String familyName, String columnName, int value)
+    private void storeIntInternal(String familyName, String columnName, int value, boolean serialised)
     {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -636,9 +642,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    private void storeLongInternal(AbstractMemberMetaData mmd, String familyName, String columnName, long value)
+    private void storeLongInternal(String familyName, String columnName, long value, boolean serialised)
     {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -661,9 +667,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    private void storeShortInternal(AbstractMemberMetaData mmd, String familyName, String columnName, short value)
+    private void storeShortInternal(String familyName, String columnName, short value, boolean serialised)
     {
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {

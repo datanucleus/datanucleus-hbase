@@ -17,56 +17,51 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.fieldmanager;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
-import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.EmbeddedMetaData;
+import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
-import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
-import org.datanucleus.store.types.converters.TypeConverter;
+import org.datanucleus.store.schema.table.Column;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
+import org.datanucleus.store.schema.table.Table;
+import org.datanucleus.util.ClassUtils;
 
 /**
  * FieldManager for the persistence of a related embedded object (1-1 relation).
  */
 public class StoreEmbeddedFieldManager extends StoreFieldManager
 {
-    private final AbstractMemberMetaData ownerMmd;
+    /** Metadata for the embedded member (maybe nested) that this FieldManager represents). */
+    protected List<AbstractMemberMetaData> mmds;
 
-    public StoreEmbeddedFieldManager(ObjectProvider sm, Put put, Delete delete, AbstractMemberMetaData mmd,
-            String tableName, boolean insert)
+    public StoreEmbeddedFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, Put put, Delete delete, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
     {
-        super(sm, put, delete, insert, tableName);
-        this.ownerMmd = mmd;
+        super(ec, cmd, put, delete, insert, table);
+        this.mmds = mmds;
     }
 
-    protected String getFamilyName(int fieldNumber)
+    public StoreEmbeddedFieldManager(ObjectProvider sm, Put put, Delete delete, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
     {
-        return HBaseUtils.getFamilyName(ownerMmd, fieldNumber, tableName);
+        super(sm, put, delete, insert, table);
+        this.mmds = mmds;
     }
 
-    protected String getQualifierName(int fieldNumber)
+    protected MemberColumnMapping getColumnMapping(int fieldNumber)
     {
-        return HBaseUtils.getQualifierName(ownerMmd, fieldNumber);
-    }
-
-    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
-    {
-        return ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
+        List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>(mmds);
+        embMmds.add(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
+        return table.getMemberColumnMappingForEmbeddedMember(embMmds);
     }
 
     /* (non-Javadoc)
@@ -74,254 +69,74 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
      */
     public void storeObjectField(int fieldNumber, Object value)
     {
-        if (!isStorable(fieldNumber))
+        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        AbstractMemberMetaData lastMmd = mmds.get(mmds.size()-1);
+        EmbeddedMetaData embmd = mmds.get(0).getEmbeddedMetaData();
+        if (mmds.size() == 1 && embmd != null && embmd.getOwnerMember() != null && embmd.getOwnerMember().equals(mmd.getName()))
         {
+            // Special case of this member being a link back to the owner. TODO Repeat this for nested and their owners
+            if (op != null)
+            {
+                ObjectProvider[] ownerOPs = op.getEmbeddedOwners();
+                if (ownerOPs != null && ownerOPs.length == 1 && value != ownerOPs[0].getObject())
+                {
+                    // Make sure the owner field is set
+                    op.replaceField(fieldNumber, ownerOPs[0].getObject());
+                }
+            }
             return;
         }
 
-        String familyName = getFamilyName(fieldNumber);
-        String columnName = getQualifierName(fieldNumber);
-        if (value == null)
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        RelationType relationType = mmd.getRelationType(clr);
+        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, lastMmd))
         {
-            // TODO What about delete-orphans?
-            delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
-        }
-        else
-        {
-            ExecutionContext ec = op.getExecutionContext();
-            ClassLoaderResolver clr = ec.getClassLoaderResolver();
-            AbstractMemberMetaData embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
-            RelationType relationType = embMmd.getRelationType(clr);
-            if ((relationType == RelationType.ONE_TO_ONE_BI || relationType == RelationType.ONE_TO_ONE_UNI) && embMmd.isEmbedded())
+            // Embedded field
+            if (RelationType.isRelationSingleValued(relationType))
             {
-                // Embedded PC object
-                Class embcls = embMmd.getType();
-                AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
-                if (embcmd != null)
+                AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>(mmds);
+                embMmds.add(mmd);
+
+                if (value == null)
                 {
-                    ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, embMmd);
-                    FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, embMmd, tableName, insert);
-                    embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
+                    // Store null in all columns of this and any nested embedded objects // TODO Do this for all embedded fields (and nested)
+                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(ec, embCmd, put, delete, insert, embMmds, table);
+                    int[] embMmdPosns = embCmd.getAllMemberPositions();
+                    for (int i=0;i<embMmdPosns.length;i++)
+                    {
+                        AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(embMmdPosns[i]);
+                        if (String.class.isAssignableFrom(embMmd.getType()) || embMmd.getType().isPrimitive() || ClassUtils.isPrimitiveWrapperType(mmd.getTypeName()))
+                        {
+                            // Remove property for any primitive/wrapper/String fields
+                            List<AbstractMemberMetaData> colEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
+                            colEmbMmds.add(embMmd);
+                            MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(colEmbMmds);
+                            Column col = mapping.getColumn(0);
+                            String colFamName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
+                            String colQualName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                            delete.deleteColumn(colFamName.getBytes(), colQualName.getBytes());
+                        }
+                        else if (Object.class.isAssignableFrom(embMmd.getType()))
+                        {
+                            storeEmbFM.storeObjectField(embMmdPosns[i], null);
+                        }
+                    }
+                }
+                else
+                {
+                    ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
+                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(embOP, put, delete, insert, embMmds, table);
+                    embOP.provideFields(embCmd.getAllMemberPositions(), storeEmbFM);
                     return;
-                }
-                else
-                {
-                    throw new NucleusUserException("Field " + embMmd.getFullFieldName() +
-                        " specified as embedded but metadata not found for the class of type " + embMmd.getTypeName());
-                }
-            }
-            else if (RelationType.isRelationSingleValued(relationType))
-            {
-                // PC object, so make sure it is persisted
-                Object valuePC = op.getExecutionContext().persistObjectInternal(value, op, fieldNumber, -1);
-                if (embMmd.isSerialized())
-                {
-                    // Persist as serialised into the column of this object
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(value);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
-                }
-                else
-                {
-                    // Persist identity in the column of this object
-                    Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(valueId);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
-                }
-            }
-            else if (RelationType.isRelationMultiValued(relationType))
-            {
-                // Collection/Map/Array
-                if (embMmd.hasCollection())
-                {
-                    Collection collIds = new ArrayList();
-                    Collection coll = (Collection)value;
-                    Iterator collIter = coll.iterator();
-                    while (collIter.hasNext())
-                    {
-                        Object element = collIter.next();
-                        Object elementPC = op.getExecutionContext().persistObjectInternal(element, op, fieldNumber, -1);
-                        Object elementID = op.getExecutionContext().getApiAdapter().getIdForObject(elementPC);
-                        collIds.add(elementID);
-                    }
-
-                    if (embMmd.isSerialized())
-                    {
-                        // Persist as serialised into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(value);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
-                    }
-                    else
-                    {
-                        // Persist comma-separated element key list into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(collIds);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
-                    }
-                }
-                else if (embMmd.hasMap())
-                {
-                    Map map = (Map)value;
-                    Iterator<Map.Entry> mapIter = map.entrySet().iterator();
-                    while (mapIter.hasNext())
-                    {
-                        Map.Entry entry = mapIter.next();
-                        Object mapKey = entry.getKey();
-                        Object mapValue = entry.getValue();
-                        if (ec.getApiAdapter().isPersistable(mapKey))
-                        {
-                            ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
-                        }
-                        if (ec.getApiAdapter().isPersistable(mapValue))
-                        {
-                            ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
-                        }
-                    }
-                    if (embMmd.isSerialized())
-                    {
-                        // Persist as serialised into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(value);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
-                    }
-                    else
-                    {
-                        // TODO Implement map persistence non-serialised
-                        throw new NucleusException("Only currently support maps serialised with HBase. Mark the field as serialized");
-                    }
-                }
-                else if (embMmd.hasArray())
-                {
-                    Collection arrIds = new ArrayList();
-                    for (int i=0;i<Array.getLength(value);i++)
-                    {
-                        Object element = Array.get(value, i);
-                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
-                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                        arrIds.add(elementID);
-                    }
-
-                    if (embMmd.isSerialized())
-                    {
-                        // Persist as serialised into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(value);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
-                    }
-                    else
-                    {
-                        // Persist list of array element ids into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(arrIds);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
-                    }
                 }
             }
             else
             {
-                if (Enum.class.isAssignableFrom(value.getClass()) && !embMmd.isSerialized())
-                {
-                    // TODO Persist as number when requested
-                    put.add(familyName.getBytes(), columnName.getBytes(), ((Enum)value).name().getBytes());
-                }
-
-                TypeConverter strConv =
-                    op.getExecutionContext().getTypeManager().getTypeConverterForType(embMmd.getType(), String.class);
-                if (!embMmd.isSerialized() && strConv != null)
-                {
-                    // Persist as a String
-                    String strValue = (String) strConv.toDatastoreType(value);
-                    put.add(familyName.getBytes(), columnName.getBytes(), strValue.getBytes());
-                }
-                else
-                {
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(value);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
-                }
+                throw new NucleusUserException("Field " + mmd.getFullFieldName() + " specified as embedded but field of this type not suppported");
             }
         }
+
+        storeNonEmbeddedObjectField(mmd, relationType, clr, value);
     }
 }

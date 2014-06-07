@@ -40,12 +40,12 @@ import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.StoreManager;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.converters.TypeConverter;
 
@@ -99,144 +99,6 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase family name for the field of the embedded field.
-     * Extracts the family name using the following priorities
-     * <ul>
-     * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
-     * <li>Otherwise takes table name as the family name</li>
-     * </ul>
-     * @param mmd Metadata for the embedded field
-     * @param fieldNumber Number of the field in the embedded object
-     * @param tableName Name of the table
-     * @return The family name
-     */
-    public static String getFamilyName(AbstractMemberMetaData mmd, int fieldNumber, String tableName)
-    {
-        // Try from the column name if specified as "a:b"
-        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-        AbstractMemberMetaData embMmd = null;
-        if (embmd != null)
-        {
-            AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-            embMmd = embmmds[fieldNumber];
-            ColumnMetaData[] colmds = embMmd.getColumnMetaData();
-            if (colmds != null && colmds.length > 0)
-            {
-                return getFamilyNameForColumnName(colmds[0].getName(), tableName);
-            }
-        }
-
-        // Fallback to table name
-        return tableName;
-    }
-
-    /**
-     * Accessor for the HBase qualifier name for the field of this embedded field.
-     * Extracts the qualifier name using the following priorities
-     * <ul>
-     * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
-     * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
-     * <li>Otherwise takes "VERSION" as the qualifier name</li>
-     * </ul>
-     * @param mmd Metadata for the owning member
-     * @param fieldNumber Member number of the embedded object
-     * @return The qualifier name
-     */
-    public static String getQualifierName(AbstractMemberMetaData mmd, int fieldNumber)
-    {
-        String columnName = null;
-
-        // Try the first column if specified
-        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-        AbstractMemberMetaData embMmd = null;
-        if (embmd != null)
-        {
-            AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-            embMmd = embmmds[fieldNumber];
-        }
-
-        if (embMmd != null)
-        {
-            ColumnMetaData[] colmds = embMmd.getColumnMetaData();
-            if (colmds != null && colmds.length > 0)
-            {
-                columnName = colmds[0].getName();
-            }
-            if (columnName == null)
-            {
-                // Fallback to the field/property name
-                columnName = embMmd.getName();
-            }
-        }
-        return getQualifierNameForColumnName(columnName);
-    }
-
-    /**
-     * Accessor for the HBase family name for this field. Extracts the family name using the following priorities
-     * <ul>
-     * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
-     * <li>Otherwise takes the table name as the family name</li>
-     * </ul>
-     * @param acmd Metadata for the class
-     * @param absoluteFieldNumber Field number
-     * @param tableName Name of the table
-     * @return The family name
-     */
-    public static String getFamilyName(AbstractClassMetaData acmd, int absoluteFieldNumber, String tableName)
-    {
-        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
-        String columnName = null;
-
-        // Try the first column if specified
-        ColumnMetaData[] colmds = ammd.getColumnMetaData();
-        if (colmds != null && colmds.length > 0)
-        {
-            columnName = colmds[0].getName();
-            if (columnName != null && columnName.indexOf(":") > -1)
-            {
-                return columnName.substring(0, columnName.indexOf(":"));
-            }
-        }
-
-        // Fallback to the table name
-        return tableName;
-    }
-
-    /**
-     * Accessor for the HBase qualifier name for this field. Extracts the qualifier name using the following priorities
-     * <ul>
-     * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
-     * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
-     * <li>Otherwise takes the field name as the qualifier name</li>
-     * </ul>
-     * @param acmd Metadata for the class
-     * @param absoluteFieldNumber Field number
-     * @return The qualifier name
-     */
-    public static String getQualifierName(AbstractClassMetaData acmd, int absoluteFieldNumber)
-    {
-        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
-        String columnName = null;
-
-        // Try the first column if specified
-        ColumnMetaData[] colmds = ammd.getColumnMetaData();
-        if (colmds != null && colmds.length > 0)
-        {
-            columnName = colmds[0].getName();
-        }
-        if (columnName == null)
-        {
-            // Fallback to the field/property name
-            columnName = ammd.getName();
-        }
-        if (columnName.indexOf(":") > -1)
-        {
-            columnName = columnName.substring(columnName.indexOf(":") + 1);
-        }
-        return columnName;
-    }
-
-    /**
      * Convenience method that extracts the version for a class of the specified type from the passed Result.
      * @param cmd Metadata for the class
      * @param result The result
@@ -245,9 +107,9 @@ public class HBaseUtils
      * @param storeMgr StoreManager
      * @return The version
      */
-    public static Object getVersionForObject(AbstractClassMetaData cmd, Result result, ExecutionContext ec,
-            String tableName, StoreManager storeMgr)
+    public static Object getVersionForObject(AbstractClassMetaData cmd, Result result, ExecutionContext ec, Table table, StoreManager storeMgr)
     {
+        String tableName = table.getName();
         if (cmd.isVersioned())
         {
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
@@ -255,8 +117,9 @@ public class HBaseUtils
             {
                 // Version stored in a field
                 AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                String familyName = HBaseUtils.getFamilyName(cmd, verMmd.getAbsoluteFieldNumber(), tableName);
-                String qualifName = HBaseUtils.getQualifierName(cmd, verMmd.getAbsoluteFieldNumber());
+                Column col = table.getMemberColumnMappingForMember(verMmd).getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), tableName);
+                String qualifName = HBaseUtils.getQualifierNameForColumnName(col.getName());
                 Object version = null;
                 try
                 {

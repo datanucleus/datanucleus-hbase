@@ -23,8 +23,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.client.Result;
@@ -37,49 +39,57 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.schema.table.Column;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.store.types.converters.TypeConverterHelper;
 
+/**
+ * FieldManager to use for retrieving values from HBase to put into a persistable object.
+ */
 public class FetchFieldManager extends AbstractFetchFieldManager
 {
-    Result result;
-    String tableName;
+    Table table;
 
-    public FetchFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, Result result, String tableName)
+    Result result;
+
+    public FetchFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, Result result, Table table)
     {
         super(ec, cmd);
         this.result = result;
-        this.tableName = tableName;
+        this.table = table;
     }
 
-    public FetchFieldManager(ObjectProvider op, Result result, String tableName)
+    public FetchFieldManager(ObjectProvider op, Result result, Table table)
     {
         super(op);
         this.result = result;
-        this.tableName = tableName;
+        this.table = table;
+    }
+
+    protected MemberColumnMapping getColumnMapping(int fieldNumber)
+    {
+        return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
     protected String getFamilyName(int fieldNumber)
     {
-        return HBaseUtils.getFamilyName(cmd, fieldNumber, tableName);
+        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
+        return HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
     }
 
     protected String getQualifierName(int fieldNumber)
     {
-        return HBaseUtils.getQualifierName(cmd, fieldNumber);
-    }
-
-    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
-    {
-        return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
+        return HBaseUtils.getQualifierNameForColumnName(col.getName());
     }
 
     public boolean fetchBooleanField(int fieldNumber)
@@ -87,8 +97,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchBooleanInternal(mmd, bytes);
+        return fetchBooleanInternal(bytes, false, null);
     }
 
     public byte fetchByteField(int fieldNumber)
@@ -96,8 +105,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchByteInternal(mmd, bytes);
+        return fetchByteInternal(bytes, false, null);
     }
 
     public char fetchCharField(int fieldNumber)
@@ -105,8 +113,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchCharInternal(mmd, bytes);
+        return fetchCharInternal(bytes, false, null);
     }
 
     public double fetchDoubleField(int fieldNumber)
@@ -114,8 +121,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchDoubleInternal(mmd, bytes);
+        return fetchDoubleInternal(bytes, false, null);
     }
 
     public float fetchFloatField(int fieldNumber)
@@ -123,8 +129,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchFloatInternal(mmd, bytes);
+        return fetchFloatInternal(bytes, false, null);
     }
 
     public int fetchIntField(int fieldNumber)
@@ -132,8 +137,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchIntInternal(mmd, bytes);
+        return fetchIntInternal(bytes, false, null);
     }
 
     public long fetchLongField(int fieldNumber)
@@ -141,8 +145,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchLongInternal(mmd, bytes);
+        return fetchLongInternal(bytes, false, null);
     }
 
     public short fetchShortField(int fieldNumber)
@@ -150,32 +153,29 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        return fetchShortInternal(mmd, bytes);
+        return fetchShortInternal(bytes, false, null);
     }
 
     public String fetchStringField(int fieldNumber)
     {
-        String value;
         String familyName = getFamilyName(fieldNumber);
         String qualifName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (bytes == null)
         {
-            // Handle missing field
-            return HBaseUtils.getDefaultValueForMember(mmd);
+            // TODO Get hold of default from column
+            return null;
         }
 
-        if (mmd.isSerialized())
-        {
-            try
+        // TODO Allow for serialised string fields
+        /*try
             {
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
-                value = (String) ois.readObject();
+                String value = (String) ois.readObject();
                 ois.close();
                 bis.close();
+                return value;
             }
             catch (IOException e)
             {
@@ -184,13 +184,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             catch (ClassNotFoundException e)
             {
                 throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = new String(bytes);
-        }
-        return value;
+            }*/
+
+        return new String(bytes);
     }
 
     public Object fetchObjectField(int fieldNumber)
@@ -198,22 +194,30 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         RelationType relationType = mmd.getRelationType(clr);
-        if (RelationType.isRelationSingleValued(relationType) && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
+        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
         {
-            // Persistable object embedded into table of this object
-            Class embcls = mmd.getType();
-            AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
-            if (embcmd != null)
+            // Embedded field
+            if (RelationType.isRelationSingleValued(relationType))
             {
+                // Persistable object embedded into table of this object
+                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
+                embMmds.add(mmd);
+
+                Class embcls = mmd.getType();
+                AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
+
                 // Check for null value (currently need all columns to return null)
                 // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
-                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-                AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
                 boolean isNull = true;
-                for (int i=0;i<embmmds.length;i++)
+                int[] embAllPosns = embCmd.getAllMemberPositions();
+                for (int i=0;i<embAllPosns.length;i++)
                 {
-                    String familyName = HBaseUtils.getFamilyName(mmd, i, tableName);
-                    String columnName = HBaseUtils.getQualifierName(mmd, i);
+                    AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(i);
+                    List<AbstractMemberMetaData> subEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
+                    subEmbMmds.add(embMmd);
+                    Column col = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds).getColumn(0);
+                    String familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
+                    String columnName = HBaseUtils.getQualifierNameForColumnName(col.getName());
                     if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
                     {
                         isNull = false;
@@ -225,16 +229,22 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     return null;
                 }
 
-                ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, op, fieldNumber);
-                FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, mmd, tableName);
-                embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
+                ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embCmd, op, fieldNumber);
+                FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmds, table);
+                embSM.replaceFields(embCmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
             }
-            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
+            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded not supported for this type");
         }
 
-        String familyName = HBaseUtils.getFamilyName(cmd, fieldNumber, tableName);
-        String qualifName = HBaseUtils.getQualifierName(cmd, fieldNumber);
+        return fetchNonEmbeddedObjectField(mmd, relationType, clr);
+    }
+
+    protected Object fetchNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr)
+    {
+        int fieldNumber = mmd.getAbsoluteFieldNumber();
+        String familyName = getFamilyName(fieldNumber);
+        String qualifName = getQualifierName(fieldNumber);
         Object value = readObjectField(familyName, qualifName, result, fieldNumber, mmd);
         if (value == null)
         {
@@ -438,37 +448,38 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             return null;
         }
 
+        // TODO Get default value for column from Table/Column structure
         if (mmd.getType() == Boolean.class)
         {
-            return fetchBooleanInternal(mmd, bytes);
+            return fetchBooleanInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Byte.class)
         {
-            return fetchByteInternal(mmd, bytes);
+            return fetchByteInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Character.class)
         {
-            return fetchCharInternal(mmd, bytes);
+            return fetchCharInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Double.class)
         {
-            return fetchDoubleInternal(mmd, bytes);
+            return fetchDoubleInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Float.class)
         {
-            return fetchFloatInternal(mmd, bytes);
+            return fetchFloatInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Integer.class)
         {
-            return fetchIntInternal(mmd, bytes);
+            return fetchIntInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Long.class)
         {
-            return fetchLongInternal(mmd, bytes);
+            return fetchLongInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (mmd.getType() == Short.class)
         {
-            return fetchShortInternal(mmd, bytes);
+            return fetchShortInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (Enum.class.isAssignableFrom(mmd.getType()))
         {
@@ -479,7 +490,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
             if (MetaDataUtils.persistColumnAsNumeric(colmd))
             {
-                return fetchIntInternal(mmd, bytes);
+                return fetchIntInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
             }
         }
 
@@ -517,21 +528,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
     }
 
-    private boolean fetchBooleanInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private boolean fetchBooleanInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         boolean value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return Boolean.valueOf(dflt).booleanValue();
+                return Boolean.valueOf(defaultValue).booleanValue();
             }
             return false;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -553,15 +563,14 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return value;
     }
 
-    private byte fetchByteInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private byte fetchByteInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return dflt.getBytes()[0];
+                return defaultValue.getBytes()[0];
             }
             return 0;
         }
@@ -569,21 +578,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return bytes[0];
     }
 
-    private char fetchCharInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private char fetchCharInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         char value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null && dflt.length() > 0)
+            if (defaultValue != null && defaultValue.length() > 0)
             {
-                return dflt.charAt(0);
+                return defaultValue.charAt(0);
             }
             return 0;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -606,21 +614,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return value;
     }
 
-    private double fetchDoubleInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private double fetchDoubleInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         double value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return Double.valueOf(dflt).doubleValue();
+                return Double.valueOf(defaultValue).doubleValue();
             }
             return 0;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -642,21 +649,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return value;
     }
 
-    private float fetchFloatInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private float fetchFloatInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         float value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return Float.valueOf(dflt).floatValue();
+                return Float.valueOf(defaultValue).floatValue();
             }
             return 0;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -678,21 +684,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return value;
     }
 
-    private int fetchIntInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private int fetchIntInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         int value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return Integer.valueOf(dflt).intValue();
+                return Integer.valueOf(defaultValue).intValue();
             }
             return 0;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -714,21 +719,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return value;
     }
 
-    private long fetchLongInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private long fetchLongInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         long value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return Long.valueOf(dflt).longValue();
+                return Long.valueOf(defaultValue).longValue();
             }
             return 0;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {
@@ -750,21 +754,20 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return value;
     }
 
-    private short fetchShortInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    private short fetchShortInternal(byte[] bytes, boolean serialised, String defaultValue)
     {
         short value;
         if (bytes == null)
         {
             // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
+            if (defaultValue != null)
             {
-                return Short.valueOf(dflt).shortValue();
+                return Short.valueOf(defaultValue).shortValue();
             }
             return 0;
         }
 
-        if (mmd.isSerialized())
+        if (serialised)
         {
             try
             {

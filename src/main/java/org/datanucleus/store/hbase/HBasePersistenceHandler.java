@@ -254,7 +254,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            StoreFieldManager fm = new StoreFieldManager(op, put, delete, true, tableName);
+            StoreFieldManager fm = new StoreFieldManager(op, put, delete, true, table);
             op.provideFields(cmd.getAllMemberPositions(), fm);
 
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
@@ -328,7 +328,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 // Optimistic checking of version
                 Result result = HBaseUtils.getResultForObject(op, htable);
-                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName, storeMgr);
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                 VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
 
@@ -396,7 +396,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            StoreFieldManager fm = new StoreFieldManager(op, put, delete, false, tableName);
+            StoreFieldManager fm = new StoreFieldManager(op, put, delete, false, table);
             op.provideFields(updatedFieldNums, fm);
             if (!put.isEmpty())
             {
@@ -490,7 +490,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             try
             {
                 long startTime = System.currentTimeMillis();
-                HTableInterface table = mconn.getHTable(tableName);
+                HTableInterface htable = mconn.getHTable(tableName);
+                Table table = ec.getStoreManager().getStoreDataForClass(opsForTable.iterator().next().getClassMetaData().getFullClassName()).getTable();
 
                 List<Delete> deletes = new ArrayList(opsForTable.size());
                 for (ObjectProvider op : opsForTable)
@@ -508,8 +509,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         // Optimistic checking of version
                         Object currentVersion = op.getTransactionalVersion();
-                        Result result = HBaseUtils.getResultForObject(op, table);
-                        Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName, storeMgr);
+                        Result result = HBaseUtils.getResultForObject(op, htable);
+                        Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                         if (!datastoreVersion.equals(currentVersion)) // TODO Use VersionHelper.performVersionCheck
                         {
                             if (optimisticExcps == null)
@@ -535,7 +536,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
 
                 // Delete all rows from this table
-                table.delete(deletes);
+                htable.delete(deletes);
                 if (ec.getStatistics() != null)
                 {
                     // Add to statistics
@@ -600,7 +601,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 // Optimistic checking of version
                 Result result = HBaseUtils.getResultForObject(op, htable);
-                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName, storeMgr);
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                 VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
 
@@ -703,7 +704,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            FetchFieldManager fm = new FetchFieldManager(op, result, tableName);
+            FetchFieldManager fm = new FetchFieldManager(op, result, table);
             op.replaceFields(cmd.getAllMemberPositions(), fm);
 
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
