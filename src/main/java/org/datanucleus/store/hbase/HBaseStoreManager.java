@@ -44,8 +44,13 @@ import org.datanucleus.store.NucleusConnection;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.schema.SchemaAwareStoreManager;
+import org.datanucleus.store.schema.table.CompleteClassTable;
 import org.datanucleus.util.Localiser;
 
+/**
+ * StoreManager for HBase datastores.
+ * Primary entry point into the HBase plugin.
+ */
 public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwareStoreManager
 {
     static
@@ -168,8 +173,12 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
                     StoreData sd = storeDataMgr.get(cmd.getFullClassName());
                     if (sd == null)
                     {
-                        registerStoreData(newStoreData(cmd, clr));
+                        CompleteClassTable table = new CompleteClassTable(this, cmd, null);
+                        sd = newStoreData(cmd, clr);
+                        sd.setTable(table);
+                        registerStoreData(sd);
                     }
+
                     clsNameSet.add(cmd.getFullClassName());
                 }
             }

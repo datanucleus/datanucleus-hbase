@@ -37,9 +37,12 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.metadata.MetaDataExtensionParser;
 import org.datanucleus.store.schema.AbstractStoreSchemaHandler;
+import org.datanucleus.store.schema.table.CompleteClassTable;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -78,18 +81,28 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
     /**
      * Create a schema in HBase. Do not make this method public, since it uses privileged actions.
      * @param storeMgr HBase StoreManager
-     * @param acmd Metadata for the class
+     * @param cmd Metadata for the class
      * @param validateOnly Whether to only validate for existence and flag missing schema in the log
      */
-    public void createSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData acmd, final boolean validateOnly)
+    public void createSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData cmd, final boolean validateOnly)
     {
-        if (acmd.isEmbeddedOnly())
+        if (cmd.isEmbeddedOnly())
         {
             // No schema required since only ever embedded
             return;
         }
 
-        final String tableName = storeMgr.getNamingFactory().getTableName(acmd);
+        StoreData storeData = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        Table table = null;
+        if (storeData != null)
+        {
+            table = storeData.getTable();
+        }
+        else
+        {
+            table = new CompleteClassTable(storeMgr, cmd, null);
+        }
+        final String tableName = table.getName();
         final Configuration config = storeMgr.getHbaseConfig();
         try
         {
@@ -115,11 +128,11 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                     {
                         if (validateOnly)
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class", acmd.getFullClassName(), tableName));
+                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class", cmd.getFullClassName(), tableName));
                         }
                         else if (storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", acmd.getFullClassName(), tableName));
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableName));
                             hTable = new HTableDescriptor(tableName);
                             hBaseAdmin.createTable(hTable);
                         }
@@ -133,7 +146,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             {
                 return;
             }
-            MetaDataExtensionParser ep = new MetaDataExtensionParser(acmd);
+            MetaDataExtensionParser ep = new MetaDataExtensionParser(cmd);
 
             boolean modified = false;
             if (!hTable.hasFamily(tableName.getBytes()))
@@ -157,12 +170,12 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                 }
             }
 
-            int[] fieldNumbers = acmd.getAllMemberPositions();
+            int[] fieldNumbers = cmd.getAllMemberPositions();
             ClassLoaderResolver clr = storeMgr.getNucleusContext().getClassLoaderResolver(null);
             Set<String> familyNames = new HashSet<String>();
             for (int fieldNumber : fieldNumbers)
             {
-                AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
                 RelationType relationType = mmd.getRelationType(clr);
                 if (RelationType.isRelationSingleValued(relationType) && 
                      MetaDataUtils.getInstance().isMemberEmbedded(storeMgr.getMetaDataManager(), clr, mmd, relationType, null))
@@ -171,7 +184,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                 }
                 else
                 {
-                    String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber, tableName);
+                    String familyName = HBaseUtils.getFamilyName(cmd, fieldNumber, tableName);
                     familyNames.add(familyName);
                     if (!hTable.hasFamily(familyName.getBytes()))
                     {
@@ -285,19 +298,28 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
     /**
      * Delete the schema for the specified class from HBase.
      * @param storeMgr HBase StoreManager
-     * @param acmd Metadata for the class
+     * @param cmd Metadata for the class
      */
-    void deleteSchemaForClass(final AbstractClassMetaData acmd)
+    void deleteSchemaForClass(final AbstractClassMetaData cmd)
     {
-        if (acmd.isEmbeddedOnly())
+        if (cmd.isEmbeddedOnly())
         {
             // No schema present since only ever embedded
             return;
         }
 
-        HBaseStoreManager hbaseStoreMgr = (HBaseStoreManager)storeMgr;
-        final String tableName = storeMgr.getNamingFactory().getTableName(acmd);
-        final Configuration config = hbaseStoreMgr.getHbaseConfig();
+        StoreData storeData = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        Table table = null;
+        if (storeData != null)
+        {
+            table = storeData.getTable();
+        }
+        else
+        {
+            table = new CompleteClassTable(storeMgr, cmd, null);
+        }
+        final String tableName = table.getName();
+        final Configuration config = ((HBaseStoreManager)storeMgr).getHbaseConfig();
         try
         {
             final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
@@ -331,7 +353,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             {
                 public Object run() throws Exception
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaDelete.Class", acmd.getFullClassName(), hTable.getNameAsString()));
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaDelete.Class", cmd.getFullClassName(), hTable.getNameAsString()));
                     hBaseAdmin.disableTable(hTable.getName());
                     hBaseAdmin.deleteTable(hTable.getName());
                     return null;

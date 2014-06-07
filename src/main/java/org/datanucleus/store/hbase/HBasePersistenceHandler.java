@@ -55,7 +55,7 @@ import org.datanucleus.store.VersionHelper;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.StoreFieldManager;
-import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
@@ -95,18 +95,19 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         // Check if read-only so update not permitted
         assertReadOnlyForUpdateOfObject(op);
 
+        ExecutionContext ec = op.getExecutionContext();
+        AbstractClassMetaData cmd = op.getClassMetaData();
         if (!storeMgr.managesClass(op.getClassMetaData().getFullClassName()))
         {
             storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), op.getClassMetaData().getFullClassName());
         }
+        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
 
-        ExecutionContext ec = op.getExecutionContext();
-        AbstractClassMetaData cmd = op.getClassMetaData();
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(ec);
         try
         {
-            String tableName = storeMgr.getNamingFactory().getTableName(cmd);
-            HTableInterface table = mconn.getHTable(tableName);
+            String tableName = table.getName();
+            HTableInterface htable = mconn.getHTable(tableName);
             boolean enforceUniquenessInApp = storeMgr.getBooleanProperty("datanucleus.hbase.enforceUniquenessInApplication", false);
             if (enforceUniquenessInApp)
             {
@@ -119,7 +120,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     try
                     {
-                        if (HBaseUtils.objectExistsInTable(op, table))
+                        if (HBaseUtils.objectExistsInTable(op, htable))
                         {
                             throw new NucleusUserException(Localiser.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
                                 op.getObjectAsPrintable(), op.getInternalObjectId()));
@@ -143,7 +144,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
+                String colName = table.getDatastoreIdColumn().getName();
                 String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
                 String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
                 Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId());
@@ -176,7 +177,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     discVal = discmd.getValue();
                 }
-                String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+                String colName = table.getDiscriminatorColumn().getName();
                 String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
                 String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
 
@@ -191,7 +192,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
                 else
                 {
-                    String name = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.MULTITENANCY_COLUMN);
+                    String name = table.getMultitenancyColumn().getName();
                     String familyName = HBaseUtils.getFamilyNameForColumnName(name, tableName);
                     String qualifName = HBaseUtils.getQualifierNameForColumnName(name);
                     put.add(familyName.getBytes(), qualifName.getBytes(),
@@ -224,7 +225,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Surrogate version, so add to the put
-                    String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
+                    String colName = table.getVersionColumn().getName();
                     String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
                     String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
                     if (nextVersion instanceof Long)
@@ -262,7 +263,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put",
                     StringUtils.toJVMIDString(op.getObject()), tableName, put));
             }
-            table.put(put);
+            htable.put(put);
             if (ec.getStatistics() != null)
             {
                 // Add to statistics
@@ -316,12 +317,18 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
             }
 
-            String tableName = storeMgr.getNamingFactory().getTableName(cmd);
-            HTableInterface table = mconn.getHTable(tableName);
+            if (!storeMgr.managesClass(op.getClassMetaData().getFullClassName()))
+            {
+                storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), op.getClassMetaData().getFullClassName());
+            }
+            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+
+            String tableName = table.getName();
+            HTableInterface htable = mconn.getHTable(tableName);
             if (cmd.isVersioned())
             {
                 // Optimistic checking of version
-                Result result = HBaseUtils.getResultForObject(op, table);
+                Result result = HBaseUtils.getResultForObject(op, htable);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName, storeMgr);
                 VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
@@ -360,7 +367,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Update the stored surrogate value
-                    String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
+                    String colName = table.getVersionColumn().getName();
                     String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
                     String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
                     if (nextVersion instanceof Long)
@@ -398,7 +405,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put", StringUtils.toJVMIDString(op.getObject()), tableName, put));
                 }
-                table.put(put);
+                htable.put(put);
                 if (ec.getStatistics() != null)
                 {
                     // Add to statistics
@@ -413,7 +420,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Delete", StringUtils.toJVMIDString(op.getObject()), tableName, delete));
                 }
-                table.delete(delete);
+                htable.delete(delete);
                 if (ec.getStatistics() != null)
                 {
                     // Add to statistics
@@ -457,12 +464,15 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             return;
         }
 
+        ExecutionContext ec = ops[0].getExecutionContext();
+
         // Separate the objects to be deleted into groups, for the "table" in question
         Map<String, Set<ObjectProvider>> opsByTable = new HashMap<String, Set<ObjectProvider>>();
         for (int i=0;i<ops.length;i++)
         {
             AbstractClassMetaData cmd = ops[i].getClassMetaData();
-            String tableName = storeMgr.getNamingFactory().getTableName(cmd);
+            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            String tableName = table.getName();
             Set<ObjectProvider> opsForTable = opsByTable.get(tableName);
             if (opsForTable == null)
             {
@@ -477,7 +487,6 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         {
             String tableName = entry.getKey();
             Set<ObjectProvider> opsForTable = entry.getValue();
-            ExecutionContext ec = ops[0].getExecutionContext();
             HBaseManagedConnection mconn = (HBaseManagedConnection)storeMgr.getConnection(ec);
             try
             {
@@ -585,12 +594,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
-            String tableName = storeMgr.getNamingFactory().getTableName(cmd);
-            HTableInterface table = mconn.getHTable(tableName);
+            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            String tableName = table.getName();
+            HTableInterface htable = mconn.getHTable(tableName);
             if (cmd.isVersioned())
             {
                 // Optimistic checking of version
-                Result result = HBaseUtils.getResultForObject(op, table);
+                Result result = HBaseUtils.getResultForObject(op, htable);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, tableName, storeMgr);
                 VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
@@ -605,7 +615,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Delete", StringUtils.toJVMIDString(op.getObject()), tableName, delete));
             }
-            table.delete(delete);
+            htable.delete(delete);
             if (ec.getStatistics() != null)
             {
                 // Add to statistics
@@ -664,16 +674,17 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("HBase.Fetch.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
-            String tableName = storeMgr.getNamingFactory().getTableName(cmd);
-            HTableInterface table = mconn.getHTable(tableName);
-            Result result = HBaseUtils.getResultForObject(op, table);
+            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            String tableName = table.getName();
+            HTableInterface htable = mconn.getHTable(tableName);
+            Result result = HBaseUtils.getResultForObject(op, htable);
             if (result.getRow() == null)
             {
                 throw new NucleusObjectNotFoundException();
             }
             else if (cmd.hasDiscriminatorStrategy())
             {
-                String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+                String colName = table.getDiscriminatorColumn().getName();
                 String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
                 String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
                 Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
@@ -745,12 +756,14 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
     public void locateObject(ObjectProvider op)
     {
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(op.getExecutionContext());
+        ExecutionContext ec = op.getExecutionContext();
         try
         {
             final AbstractClassMetaData cmd = op.getClassMetaData();
-            String tableName = storeMgr.getNamingFactory().getTableName(cmd);
-            HTableInterface table = mconn.getHTable(tableName);
-            if (!HBaseUtils.objectExistsInTable(op, table))
+            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            String tableName = table.getName();
+            HTableInterface htable = mconn.getHTable(tableName);
+            if (!HBaseUtils.objectExistsInTable(op, htable))
             {
                 throw new NucleusObjectNotFoundException();
             }
@@ -782,9 +795,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         for (int i=0;i<ops.length;i++)
         {
             AbstractClassMetaData cmd = ops[i].getClassMetaData();
+            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
             if (!cmd.pkIsDatastoreAttributed(storeMgr))
             {
-                String tableName = storeMgr.getNamingFactory().getTableName(cmd);
+                String tableName = table.getName();
                 Set<ObjectProvider> opsForTable = opsByTable.get(tableName);
                 if (opsForTable == null)
                 {

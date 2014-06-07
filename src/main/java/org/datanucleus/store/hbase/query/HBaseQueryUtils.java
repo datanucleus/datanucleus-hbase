@@ -54,6 +54,7 @@ import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 
 class HBaseQueryUtils
@@ -71,24 +72,20 @@ class HBaseQueryUtils
      * @return List of objects of the candidate type (or subclass)
      */
     static List getObjectsOfCandidateType(final ExecutionContext ec, final HBaseManagedConnection mconn,
-            Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan, Filter filter,
-            StoreManager storeMgr)
+            Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan, Filter filter, StoreManager storeMgr)
     {
-        List<AbstractClassMetaData> cmds = 
-            MetaDataUtils.getMetaDataForCandidates(candidateClass, subclasses, ec);
-
+        List<AbstractClassMetaData> cmds = MetaDataUtils.getMetaDataForCandidates(candidateClass, subclasses, ec);
         if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
         {
             NucleusLogger.DATASTORE_NATIVE.debug("Retrieving objects for candidate=" + candidateClass.getName() +
-                (subclasses ? " and subclasses" : "") +
-                (filter != null ? (" with filter=" + filter) : ""));
+                (subclasses ? " and subclasses" : "") + (filter != null ? (" with filter=" + filter) : ""));
         }
+
         Iterator<AbstractClassMetaData> cmdIter = cmds.iterator();
         List results = new ArrayList();
         while (cmdIter.hasNext())
         {
-            AbstractClassMetaData acmd = cmdIter.next();
-            results.addAll(getObjectsOfType(ec, mconn, acmd, ignoreCache, fetchPlan, filter, storeMgr));
+            results.addAll(getObjectsOfType(ec, mconn, cmdIter.next(), ignoreCache, fetchPlan, filter, storeMgr));
         }
 
         return results;
@@ -111,7 +108,12 @@ class HBaseQueryUtils
     {
         List results = new ArrayList();
 
-        final String tableName = storeMgr.getNamingFactory().getTableName(cmd);
+        if (!storeMgr.managesClass(cmd.getFullClassName()))
+        {
+            storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+        }
+        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        final String tableName = table.getName();
         final int[] fpMembers = fp.getFetchPlanForClass(cmd).getMemberNumbers();
         try
         {
@@ -170,8 +172,8 @@ class HBaseQueryUtils
                         scan.addColumn(familyName, qualifName);
                     }
 
-                    HTableInterface table = mconn.getHTable(tableName);
-                    ResultScanner scanner = table.getScanner(scan);
+                    HTableInterface htable = mconn.getHTable(tableName);
+                    ResultScanner scanner = htable.getScanner(scan);
                     if (ec.getStatistics() != null)
                     {
                         // Add to statistics
@@ -214,8 +216,7 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    Object obj = getObjectUsingNondurableIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName,
-                        storeMgr);
+                    Object obj = getObjectUsingNondurableIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName, storeMgr);
                     if (obj != null)
                     {
                         results.add(obj);
@@ -379,21 +380,21 @@ class HBaseQueryUtils
         if (cmd.isVersioned())
         {
             // Set the version on the object
-            ObjectProvider sm = ec.findObjectProvider(pc);
+            ObjectProvider op = ec.findObjectProvider(pc);
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd.getFieldName() != null)
             {
                 // Set the version from the field value
                 AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+                version = op.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else
             {
                 // Get the surrogate version from the datastore
                 version = HBaseUtils.getSurrogateVersionForObject(cmd, result, tableName, storeMgr);
             }
-            sm.setVersion(version);
+            op.setVersion(version);
         }
 
         if (result.getRow() != null)
@@ -454,21 +455,21 @@ class HBaseQueryUtils
         if (cmd.isVersioned())
         {
             // Set the version on the object
-            ObjectProvider sm = ec.findObjectProvider(pc);
+            ObjectProvider op = ec.findObjectProvider(pc);
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd.getFieldName() != null)
             {
                 // Set the version from the field value
                 AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+                version = op.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else
             {
                 // Get the surrogate version from the datastore
                 version = HBaseUtils.getSurrogateVersionForObject(cmd, result, tableName, storeMgr);
             }
-            sm.setVersion(version);
+            op.setVersion(version);
         }
 
         if (result.getRow() != null)

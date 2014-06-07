@@ -176,8 +176,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         if (useCaching())
         {
             // Allowing caching so try to find compiled (datastore) query
-            datastoreCompilation = (HBaseQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey,
-                getLanguage(), cacheKey);
+            datastoreCompilation = (HBaseQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey, getLanguage(), cacheKey);
             if (datastoreCompilation != null)
             {
                 // Cached compilation exists for this datastore so reuse it
@@ -300,8 +299,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                     filter = filterExpr.getFilter();
                 }
 
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses,
-                    ignoreCache, getFetchPlan(), filter, storeMgr);
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses, ignoreCache, getFetchPlan(), filter, storeMgr);
                 if (filter != null && datastoreCompilation.isFilterComplete())
                 {
                     filterInMemory = false;
@@ -309,14 +307,12 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             }
 
             // Apply any other restrictions not handled in the datastore
-            JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, candidates, compilation,
-                parameters, ec.getClassLoaderResolver());
+            JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, candidates, compilation, parameters, ec.getClassLoaderResolver());
             Collection results = resultMapper.execute(filterInMemory, true, true, true, true);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", 
-                    "" + (System.currentTimeMillis() - startTime)));
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", "" + (System.currentTimeMillis() - startTime)));
             }
 
             if (type == BULK_DELETE)
