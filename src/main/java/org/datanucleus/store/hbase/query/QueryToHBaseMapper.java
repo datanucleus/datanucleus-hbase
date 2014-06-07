@@ -43,6 +43,7 @@ import org.datanucleus.store.hbase.query.expression.HBaseExpression;
 import org.datanucleus.store.hbase.query.expression.HBaseFieldExpression;
 import org.datanucleus.store.hbase.query.expression.HBaseLiteral;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
 import org.datanucleus.util.TypeConversionHelper;
@@ -533,7 +534,8 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractClassMetaData cmd = candidateCmd;
         AbstractMemberMetaData prevMmd = null;
-        String tableName = ec.getStoreManager().getNamingFactory().getTableName(candidateCmd);
+        Table table = ec.getStoreManager().getStoreDataForClass(candidateCmd.getFullClassName()).getTable();
+        String tableName = table.getName();
 
         Iterator<String> iter = tuples.iterator();
         while (iter.hasNext())

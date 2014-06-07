@@ -53,7 +53,6 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
-import org.datanucleus.store.schema.naming.ColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 
@@ -112,7 +111,7 @@ class HBaseQueryUtils
         {
             storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
         }
-        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        final Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
         final String tableName = table.getName();
         final int[] fpMembers = fp.getFetchPlanForClass(cmd).getMemberNumbers();
         try
@@ -150,7 +149,7 @@ class HBaseQueryUtils
                     if (cmd.isVersioned() && vermd.getFieldName() == null)
                     {
                         // Add version column
-                        String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
+                        String colName = table.getVersionColumn().getName();
                         byte[] familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName).getBytes();
                         byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(colName).getBytes();
                         scan.addColumn(familyName, qualifName);
@@ -158,7 +157,7 @@ class HBaseQueryUtils
                     if (cmd.hasDiscriminatorStrategy())
                     {
                         // Add discriminator column
-                        String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+                        String colName = table.getDiscriminatorColumn().getName();
                         byte[] familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName).getBytes();
                         byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(colName).getBytes();
                         scan.addColumn(familyName, qualifName);
@@ -166,7 +165,7 @@ class HBaseQueryUtils
                     if (cmd.getIdentityType() == IdentityType.DATASTORE)
                     {
                         // Add datastore identity column
-                        String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
+                        String colName = table.getDatastoreIdColumn().getName();
                         byte[] familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName).getBytes();
                         byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(colName).getBytes();
                         scan.addColumn(familyName, qualifName);
@@ -190,8 +189,7 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    Object obj = getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName,
-                        storeMgr);
+                    Object obj = getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName, storeMgr, table);
                     if (obj != null)
                     {
                         results.add(obj);
@@ -203,8 +201,7 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    Object obj = getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName,
-                        storeMgr);
+                    Object obj = getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName, storeMgr, table);
                     if (obj != null)
                     {
                         results.add(obj);
@@ -216,7 +213,7 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    Object obj = getObjectUsingNondurableIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName, storeMgr);
+                    Object obj = getObjectUsingNondurableIdForResult(result, cmd, ec, ignoreCache, fpMembers, tableName, storeMgr, table);
                     if (obj != null)
                     {
                         results.add(obj);
@@ -232,12 +229,12 @@ class HBaseQueryUtils
     }
 
     protected static Object getObjectUsingApplicationIdForResult(final Result result, final AbstractClassMetaData cmd,
-            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers, String tableName, StoreManager storeMgr)
+            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers, String tableName, StoreManager storeMgr, Table table)
     {
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+            String colName = table.getDiscriminatorColumn().getName();
             String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
             String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
@@ -307,12 +304,12 @@ class HBaseQueryUtils
     }
 
     protected static Object getObjectUsingDatastoreIdForResult(final Result result, final AbstractClassMetaData cmd,
-            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers, String tableName, StoreManager storeMgr)
+            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers, String tableName, StoreManager storeMgr, Table table)
     {
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+            String colName = table.getDiscriminatorColumn().getName();
             String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
             String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
@@ -332,7 +329,7 @@ class HBaseQueryUtils
             }
         }
 
-        String dsidColName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
+        String dsidColName = table.getDatastoreIdColumn().getName();
         String dsidFamilyName = HBaseUtils.getFamilyNameForColumnName(dsidColName, tableName);
         String dsidColumnName = HBaseUtils.getQualifierNameForColumnName(dsidColName);
         Object id = null;
@@ -407,12 +404,12 @@ class HBaseQueryUtils
     }
 
     protected static Object getObjectUsingNondurableIdForResult(final Result result, final AbstractClassMetaData cmd,
-            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers, String tableName, StoreManager storeMgr)
+            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers, String tableName, StoreManager storeMgr, Table table)
     {
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+            String colName = table.getDiscriminatorColumn().getName();
             String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
             String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));

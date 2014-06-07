@@ -37,7 +37,7 @@ import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.query.expression.HBaseBooleanExpression;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.store.query.QueryManager;
-import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -267,8 +267,9 @@ public class JPQLQuery extends AbstractJPQLQuery
                     else
                     {
                         // Add filter on discriminator for this tenant
-                        String tableName = storeMgr.getNamingFactory().getTableName(cmd);
-                        String name = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.MULTITENANCY_COLUMN);
+                        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+                        String tableName = table.getName();
+                        String name = table.getMultitenancyColumn().getName();
                         String familyName = HBaseUtils.getFamilyNameForColumnName(name, tableName);
                         String qualifName = HBaseUtils.getQualifierNameForColumnName(name);
                         String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);

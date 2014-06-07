@@ -46,7 +46,7 @@ import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.converters.TypeConverter;
 
 public class HBaseUtils
@@ -316,8 +316,9 @@ public class HBaseUtils
      */
     public static Object getSurrogateVersionForObject(AbstractClassMetaData cmd, Result result, String tableName, StoreManager storeMgr)
     {
+        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
         VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-        String colName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN);
+        String colName = table.getVersionColumn().getName();
         String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
         String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
         Object version = null;

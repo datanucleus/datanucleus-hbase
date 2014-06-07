@@ -122,8 +122,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         if (HBaseUtils.objectExistsInTable(op, htable))
                         {
-                            throw new NucleusUserException(Localiser.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
-                                op.getObjectAsPrintable(), op.getInternalObjectId()));
+                            throw new NucleusUserException(Localiser.msg("HBase.Insert.ObjectWithIdAlreadyExists", op.getObjectAsPrintable(), op.getInternalObjectId()));
                         }
                     }
                     catch (IOException e)

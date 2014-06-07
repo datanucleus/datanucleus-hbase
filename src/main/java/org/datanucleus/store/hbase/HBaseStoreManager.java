@@ -45,6 +45,7 @@ import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.schema.SchemaAwareStoreManager;
 import org.datanucleus.store.schema.table.CompleteClassTable;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 
 /**
@@ -197,8 +198,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
      * @param tablegenmd Any table generator metadata
      * @return The properties to use for this field
      */
-    protected Properties getPropertiesForGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber,
-            ExecutionContext ec, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
+    protected Properties getPropertiesForGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber, ExecutionContext ec, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
     {
         Properties props = super.getPropertiesForGenerator(cmd, absoluteFieldNumber, ec, seqmd, tablegenmd);
 
@@ -217,8 +217,12 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             strategy = idmd.getValueStrategy();
         }
 
-        String tableName = getNamingFactory().getTableName(cmd);
-        props.setProperty("table-name", tableName);
+        if (!managesClass(cmd.getFullClassName()))
+        {
+            manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+        }
+        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        props.setProperty("table-name", table.getName());
         if (strategy == IdentityStrategy.INCREMENT && tablegenmd != null)
         {
             // User has specified a TableGenerator (JPA)
