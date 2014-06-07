@@ -75,91 +75,101 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         this.table = table;
     }
 
+    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
+    {
+        return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+    }
+
     protected MemberColumnMapping getColumnMapping(int fieldNumber)
     {
         return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
-    protected String getFamilyName(int fieldNumber)
-    {
-        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getFamilyNameForColumn(col);
-    }
-
-    protected String getQualifierName(int fieldNumber)
-    {
-        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getQualifierNameForColumn(col);
-    }
-
     public boolean fetchBooleanField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchBooleanInternal(bytes, false, null);
+        return fetchBooleanInternal(bytes, mmd.isSerialized(), null);
     }
 
     public byte fetchByteField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchByteInternal(bytes, false, null);
+        return fetchByteInternal(bytes, mmd.isSerialized(), null);
     }
 
     public char fetchCharField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchCharInternal(bytes, false, null);
+        return fetchCharInternal(bytes, mmd.isSerialized(), null);
     }
 
     public double fetchDoubleField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchDoubleInternal(bytes, false, null);
+        return fetchDoubleInternal(bytes, mmd.isSerialized(), null);
     }
 
     public float fetchFloatField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchFloatInternal(bytes, false, null);
+        return fetchFloatInternal(bytes, mmd.isSerialized(), null);
     }
 
     public int fetchIntField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchIntInternal(bytes, false, null);
+        return fetchIntInternal(bytes, mmd.isSerialized(), null);
     }
 
     public long fetchLongField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchLongInternal(bytes, false, null);
+        return fetchLongInternal(bytes, mmd.isSerialized(), null);
     }
 
     public short fetchShortField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        return fetchShortInternal(bytes, false, null);
+        return fetchShortInternal(bytes, mmd.isSerialized(), null);
     }
 
     public String fetchStringField(int fieldNumber)
     {
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
         if (bytes == null)
         {
@@ -167,8 +177,11 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             return null;
         }
 
-        // TODO Allow for serialised string fields
-        /*try
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
+        {
+            // Early version of this plugin serialised values
+            try
             {
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
@@ -184,9 +197,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             catch (ClassNotFoundException e)
             {
                 throw new NucleusException(e.getMessage(), e);
-            }*/
-
-        return new String(bytes);
+            }
+        }
+        else
+        {
+            return new String(bytes);
+        }
     }
 
     public Object fetchObjectField(int fieldNumber)
@@ -243,8 +259,11 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     protected Object fetchNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr)
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+
+        Column col = mapping.getColumn(0); // TODO Support multicolumn converters
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         Object value = readObjectField(familyName, qualifName, result, fieldNumber, mmd);
         if (value == null)
         {
@@ -439,8 +458,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
     }
 
-    protected Object readObjectField(String familyName, String columnName, Result result, int fieldNumber,
-            AbstractMemberMetaData mmd)
+    protected Object readObjectField(String familyName, String columnName, Result result, int fieldNumber, AbstractMemberMetaData mmd)
     {
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         if (bytes == null)

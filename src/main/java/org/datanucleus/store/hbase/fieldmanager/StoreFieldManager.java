@@ -82,21 +82,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         this.table = table;
     }
 
+    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
+    {
+        return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+    }
+
     protected MemberColumnMapping getColumnMapping(int fieldNumber)
     {
         return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
-    }
-
-    protected String getFamilyName(int fieldNumber)
-    {
-        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getFamilyNameForColumn(col);
-    }
-
-    protected String getQualifierName(int fieldNumber)
-    {
-        Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getQualifierNameForColumn(col);
     }
 
     public void storeBooleanField(int fieldNumber, boolean value)
@@ -105,9 +98,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeBooleanInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeBooleanInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeByteField(int fieldNumber, byte value)
@@ -116,9 +109,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeByteInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeByteInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeCharField(int fieldNumber, char value)
@@ -127,9 +120,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeCharInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeCharInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeDoubleField(int fieldNumber, double value)
@@ -138,9 +131,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeDoubleInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeDoubleInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeFloatField(int fieldNumber, float value)
@@ -149,9 +142,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeFloatInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeFloatInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeIntField(int fieldNumber, int value)
@@ -160,9 +153,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeIntInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeIntInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeLongField(int fieldNumber, long value)
@@ -171,9 +164,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeLongInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeLongInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeShortField(int fieldNumber, short value)
@@ -182,9 +175,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
-        storeShortInternal(familyName, qualifName, value, false);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeShortInternal(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value, mmd.isSerialized());
     }
 
     public void storeStringField(int fieldNumber, String value)
@@ -193,17 +186,22 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        Column col = getColumnMapping(fieldNumber).getColumn(0);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (value == null)
         {
-            delete.deleteColumn(familyName.getBytes(), qualifName.getBytes());
+            delete.deleteColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
         }
         else
         {
-            // TODO This needs to cater for embedded subclass case
-            // writeObjectField(familyName, qualifName, value);
-            put.add(familyName.getBytes(), qualifName.getBytes(), value.getBytes());
+            if (mmd.isSerialized())
+            {
+                writeObjectField(HBaseUtils.getFamilyNameForColumn(col), HBaseUtils.getQualifierNameForColumn(col), value);
+            }
+            else
+            {
+                put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), value.getBytes());
+            }
         }
     }
 
@@ -270,18 +268,25 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     protected void storeNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Object value)
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
-        String familyName = getFamilyName(fieldNumber);
-        String qualifName = getQualifierName(fieldNumber);
+        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+
         if (value == null)
         {
-            // TODO What about delete-orphans?
-            delete.deleteColumn(familyName.getBytes(), qualifName.getBytes());
+            for (int i=0;i<mapping.getNumberOfColumns();i++)
+            {
+                // TODO What about delete-orphans?
+                Column col = mapping.getColumn(i);
+                delete.deleteColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
+            }
         }
         else
         {
             if (RelationType.isRelationSingleValued(relationType))
             {
                 // PC object, so make sure it is persisted
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                 Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
                 if (mmd.isSerialized())
                 {
@@ -298,6 +303,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             else if (RelationType.isRelationMultiValued(relationType))
             {
                 // Collection/Map/Array
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                 if (mmd.hasCollection())
                 {
                     Collection collIds = new ArrayList();
@@ -383,8 +391,12 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
             else
             {
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                 if (!mmd.isSerialized())
                 {
+                    // TODO Support multicolumn converters
                     if (mmd.getTypeConverterName() != null)
                     {
                         // User-defined converter
