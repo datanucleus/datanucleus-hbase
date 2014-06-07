@@ -572,8 +572,8 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                     {
                         col = table.getMemberColumnMappingForMember(mmd).getColumn(0);
                     }
-                    String familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
-                    String qualifName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                    String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                     return new PrimaryDetails(mmd.getType(), familyName, qualifName);
                 }
                 else

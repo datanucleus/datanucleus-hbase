@@ -113,8 +113,8 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                             colEmbMmds.add(embMmd);
                             MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(colEmbMmds);
                             Column col = mapping.getColumn(0);
-                            String colFamName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
-                            String colQualName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                            String colFamName = HBaseUtils.getFamilyNameForColumn(col);
+                            String colQualName = HBaseUtils.getQualifierNameForColumn(col);
                             delete.deleteColumn(colFamName.getBytes(), colQualName.getBytes());
                         }
                         else if (Object.class.isAssignableFrom(embMmd.getType()))

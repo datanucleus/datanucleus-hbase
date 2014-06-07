@@ -146,8 +146,8 @@ class HBaseQueryUtils
                         else
                         {
                             Column col = table.getMemberColumnMappingForMember(mmd).getColumn(0); // TODO Support multicol mapping
-                            byte[] familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), tableName).getBytes();
-                            byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(col.getName()).getBytes();
+                            byte[] familyName = HBaseUtils.getFamilyNameForColumn(col).getBytes();
+                            byte[] qualifName = HBaseUtils.getQualifierNameForColumn(col).getBytes();
                             scan.addColumn(familyName, qualifName);
                         }
                     }
@@ -156,25 +156,22 @@ class HBaseQueryUtils
                     if (cmd.isVersioned() && vermd.getFieldName() == null)
                     {
                         // Add version column
-                        String colName = table.getVersionColumn().getName();
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(colName).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn()).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn()).getBytes();
                         scan.addColumn(familyName, qualifName);
                     }
                     if (cmd.hasDiscriminatorStrategy())
                     {
                         // Add discriminator column
-                        String colName = table.getDiscriminatorColumn().getName();
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(colName).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn()).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn()).getBytes();
                         scan.addColumn(familyName, qualifName);
                     }
                     if (cmd.getIdentityType() == IdentityType.DATASTORE)
                     {
                         // Add datastore identity column
-                        String colName = table.getDatastoreIdColumn().getName();
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumnName(colName).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getDatastoreIdColumn()).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getDatastoreIdColumn()).getBytes();
                         scan.addColumn(familyName, qualifName);
                     }
 
@@ -241,9 +238,8 @@ class HBaseQueryUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String colName = table.getDiscriminatorColumn().getName();
-            String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-            String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
+            String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
+            String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
             {
@@ -316,9 +312,8 @@ class HBaseQueryUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String colName = table.getDiscriminatorColumn().getName();
-            String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-            String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
+            String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
+            String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
             {
@@ -336,9 +331,8 @@ class HBaseQueryUtils
             }
         }
 
-        String dsidColName = table.getDatastoreIdColumn().getName();
-        String dsidFamilyName = HBaseUtils.getFamilyNameForColumnName(dsidColName, tableName);
-        String dsidColumnName = HBaseUtils.getQualifierNameForColumnName(dsidColName);
+        String dsidFamilyName = HBaseUtils.getFamilyNameForColumn(table.getDatastoreIdColumn());
+        String dsidColumnName = HBaseUtils.getQualifierNameForColumn(table.getDatastoreIdColumn());
         Object id = null;
         try
         {
@@ -416,9 +410,8 @@ class HBaseQueryUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String colName = table.getDiscriminatorColumn().getName();
-            String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-            String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
+            String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
+            String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
             {
@@ -504,8 +497,8 @@ class HBaseQueryUtils
             }
             else
             {
-                String familyName = HBaseUtils.getFamilyNameForColumnName(mapping.getColumn(0).getName(), table.getName());
-                String qualifName = HBaseUtils.getQualifierNameForColumnName(mapping.getColumn(0).getName());
+                String familyName = HBaseUtils.getFamilyNameForColumn(mapping.getColumn(0));
+                String qualifName = HBaseUtils.getQualifierNameForColumn(mapping.getColumn(0));
                 scan.addColumn(familyName.getBytes(), qualifName.getBytes());
             }
         }

@@ -268,10 +268,8 @@ public class JPQLQuery extends AbstractJPQLQuery
                     {
                         // Add filter on discriminator for this tenant
                         Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
-                        String tableName = table.getName();
-                        String name = table.getMultitenancyColumn().getName();
-                        String familyName = HBaseUtils.getFamilyNameForColumnName(name, tableName);
-                        String qualifName = HBaseUtils.getQualifierNameForColumnName(name);
+                        String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
+                        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
                         String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);
                         filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                     }

@@ -169,8 +169,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             Set<String> familyNames = new HashSet<String>();
             for (Column col : cols)
             {
-                String colName = col.getName();
-                String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
                 if (!familyNames.contains(familyName))
                 {
                     familyNames.add(familyName);

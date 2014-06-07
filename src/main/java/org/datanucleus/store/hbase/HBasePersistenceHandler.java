@@ -143,9 +143,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                String colName = table.getDatastoreIdColumn().getName();
-                String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-                String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getDatastoreIdColumn());
+                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getDatastoreIdColumn());
                 Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId());
                 try
                 {
@@ -176,9 +175,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     discVal = discmd.getValue();
                 }
-                String colName = table.getDiscriminatorColumn().getName();
-                String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-                String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
+                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
 
                 put.add(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
             }
@@ -191,9 +189,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
                 else
                 {
-                    String name = table.getMultitenancyColumn().getName();
-                    String familyName = HBaseUtils.getFamilyNameForColumnName(name, tableName);
-                    String qualifName = HBaseUtils.getQualifierNameForColumnName(name);
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
                     put.add(familyName.getBytes(), qualifName.getBytes(),
                         storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID).getBytes());
                 }
@@ -224,9 +221,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Surrogate version, so add to the put
-                    String colName = table.getVersionColumn().getName();
-                    String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-                    String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn());
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
                     if (nextVersion instanceof Long)
                     {
                         put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
@@ -366,9 +362,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Update the stored surrogate value
-                    String colName = table.getVersionColumn().getName();
-                    String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-                    String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn());
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
                     if (nextVersion instanceof Long)
                     {
                         put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
@@ -684,9 +679,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
             else if (cmd.hasDiscriminatorStrategy())
             {
-                String colName = table.getDiscriminatorColumn().getName();
-                String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-                String columnName = HBaseUtils.getQualifierNameForColumnName(colName);
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
+                String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
                 Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
                 if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
                 {

@@ -90,13 +90,13 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     protected String getFamilyName(int fieldNumber)
     {
         Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
+        return HBaseUtils.getFamilyNameForColumn(col);
     }
 
     protected String getQualifierName(int fieldNumber)
     {
         Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getQualifierNameForColumnName(col.getName());
+        return HBaseUtils.getQualifierNameForColumn(col);
     }
 
     public void storeBooleanField(int fieldNumber, boolean value)
@@ -240,8 +240,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                             colEmbMmds.add(embMmd);
                             MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(colEmbMmds);
                             Column col = mapping.getColumn(0);
-                            String colFamName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
-                            String colQualName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                            String colFamName = HBaseUtils.getFamilyNameForColumn(col);
+                            String colQualName = HBaseUtils.getQualifierNameForColumn(col);
                             delete.deleteColumn(colFamName.getBytes(), colQualName.getBytes());
                         }
                         else if (Object.class.isAssignableFrom(embMmd.getType()))

@@ -68,29 +68,38 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the family name for a column name.
+     * Accessor for the family name for a column.
      * If the column name is of the form "family:qualifier" then returns family, otherwise returns the table name.
-     * @param colName Column name
-     * @param tableName The table name
+     * @param col Column
      * @return The family name for this column
      */
-    public static String getFamilyNameForColumnName(String colName, String tableName)
+    public static String getFamilyNameForColumn(Column col)
     {
+        if (col == null)
+        {
+            return null;
+        }
+        String colName = col.getName();
         if (colName != null && colName.indexOf(":") > 0)
         {
             return colName.substring(0, colName.indexOf(":"));
         }
-        return tableName;
+        return col.getTable().getName();
     }
 
     /**
      * Accessor for the qualifier name for a column name.
      * If the column name is of the form "family:qualifier" then returns qualifier, otherwise returns the column name.
-     * @param colName Column name
+     * @param col Column
      * @return The qualifier name for this column
      */
-    public static String getQualifierNameForColumnName(String colName)
+    public static String getQualifierNameForColumn(Column col)
     {
+        if (col == null)
+        {
+            return null;
+        }
+        String colName = col.getName();
         if (colName != null && colName.indexOf(":") > 0)
         {
             return colName.substring(colName.indexOf(":") + 1);
@@ -118,8 +127,8 @@ public class HBaseUtils
                 // Version stored in a field
                 AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                 Column col = table.getMemberColumnMappingForMember(verMmd).getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), tableName);
-                String qualifName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                 Object version = null;
                 try
                 {
@@ -181,9 +190,9 @@ public class HBaseUtils
     {
         Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
         VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-        String colName = table.getVersionColumn().getName();
-        String familyName = HBaseUtils.getFamilyNameForColumnName(colName, tableName);
-        String qualifName = HBaseUtils.getQualifierNameForColumnName(colName);
+
+        String familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn());
+        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
         Object version = null;
         try
         {

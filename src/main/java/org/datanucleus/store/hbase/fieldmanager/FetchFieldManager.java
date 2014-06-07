@@ -83,13 +83,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     protected String getFamilyName(int fieldNumber)
     {
         Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
+        return HBaseUtils.getFamilyNameForColumn(col);
     }
 
     protected String getQualifierName(int fieldNumber)
     {
         Column col = getColumnMapping(fieldNumber).getColumn(0); // TODO Multi column mapping?
-        return HBaseUtils.getQualifierNameForColumnName(col.getName());
+        return HBaseUtils.getQualifierNameForColumn(col);
     }
 
     public boolean fetchBooleanField(int fieldNumber)
@@ -216,8 +216,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     List<AbstractMemberMetaData> subEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
                     subEmbMmds.add(embMmd);
                     Column col = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds).getColumn(0);
-                    String familyName = HBaseUtils.getFamilyNameForColumnName(col.getName(), table.getName());
-                    String columnName = HBaseUtils.getQualifierNameForColumnName(col.getName());
+                    String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                    String columnName = HBaseUtils.getQualifierNameForColumn(col);
                     if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
                     {
                         isNull = false;
