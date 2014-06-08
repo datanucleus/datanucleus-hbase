@@ -169,24 +169,42 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             Set<String> familyNames = new HashSet<String>();
             for (Column col : cols)
             {
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                if (!familyNames.contains(familyName))
+                boolean changed = addColumnFamilyForColumn(col, hTable, tableName, familyNames, validateOnly);
+                if (changed)
                 {
-                    familyNames.add(familyName);
-                    if (!hTable.hasFamily(familyName.getBytes()))
-                    {
-                        if (validateOnly)
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family", tableName, familyName));
-                        }
-                        else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableName, familyName));
-                            HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
-                            hTable.addFamily(hColumn);
-                            modified = true;
-                        }
-                    }
+                    modified = true;
+                }
+            }
+            if (table.getDatastoreIdColumn() != null)
+            {
+                boolean changed = addColumnFamilyForColumn(table.getDatastoreIdColumn(), hTable, tableName, familyNames, validateOnly);
+                if (changed)
+                {
+                    modified = true;
+                }
+            }
+            if (table.getVersionColumn() != null)
+            {
+                boolean changed = addColumnFamilyForColumn(table.getVersionColumn(), hTable, tableName, familyNames, validateOnly);
+                if (changed)
+                {
+                    modified = true;
+                }
+            }
+            if (table.getDiscriminatorColumn() != null)
+            {
+                boolean changed = addColumnFamilyForColumn(table.getDiscriminatorColumn(), hTable, tableName, familyNames, validateOnly);
+                if (changed)
+                {
+                    modified = true;
+                }
+            }
+            if (table.getMultitenancyColumn() != null)
+            {
+                boolean changed = addColumnFamilyForColumn(table.getMultitenancyColumn(), hTable, tableName, familyNames, validateOnly);
+                if (changed)
+                {
+                    modified = true;
                 }
             }
 
@@ -217,6 +235,32 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         {
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
+    }
+
+    protected boolean addColumnFamilyForColumn(Column col, HTableDescriptor htable, String tableName, Set<String> familyNames, boolean validateOnly)
+    {
+        boolean modified = false;
+
+        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+        if (!familyNames.contains(familyName))
+        {
+            familyNames.add(familyName);
+            if (!htable.hasFamily(familyName.getBytes()))
+            {
+                if (validateOnly)
+                {
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaValidate.Class.Family", tableName, familyName));
+                }
+                else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
+                {
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableName, familyName));
+                    HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
+                    htable.addFamily(hColumn);
+                    modified = true;
+                }
+            }
+        }
+        return modified;
     }
 
     /* (non-Javadoc)
