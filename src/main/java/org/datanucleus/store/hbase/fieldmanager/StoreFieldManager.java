@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,10 +50,9 @@ import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
-import org.datanucleus.store.types.TypeManager;
 import org.datanucleus.store.types.converters.TypeConverter;
-import org.datanucleus.store.types.converters.TypeConverterHelper;
 import org.datanucleus.util.ClassUtils;
+import org.datanucleus.util.NucleusLogger;
 
 /**
  * FieldManager to use for storing values into HBase from a managed persistable object.
@@ -270,24 +270,56 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         int fieldNumber = mmd.getAbsoluteFieldNumber();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
-        if (value == null)
+        if (RelationType.isRelationSingleValued(relationType))
         {
-            for (int i=0;i<mapping.getNumberOfColumns();i++)
+            // PC object, so make sure it is persisted
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+            if (value == null)
             {
-                // TODO What about delete-orphans?
-                Column col = mapping.getColumn(i);
-                delete.deleteColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
+                delete.deleteColumn(familyName.getBytes(), qualifName.getBytes());
+                return;
+            }
+
+            Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
+            if (mmd.isSerialized())
+            {
+                // Persist as serialised into the column of this object
+                writeObjectField(familyName, qualifName, value);
+            }
+            else
+            {
+                // Persist identity in the column of this object
+                Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
+                writeObjectField(familyName, qualifName, valueId);
             }
         }
-        else
+        else if (RelationType.isRelationMultiValued(relationType))
         {
-            if (RelationType.isRelationSingleValued(relationType))
+            // Collection/Map/Array
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+            if (value == null)
             {
-                // PC object, so make sure it is persisted
-                Column col = mapping.getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
+                delete.deleteColumn(familyName.getBytes(), qualifName.getBytes());
+                return;
+            }
+
+            if (mmd.hasCollection())
+            {
+                Collection collIds = new ArrayList();
+                Collection coll = (Collection)value;
+                Iterator collIter = coll.iterator();
+                while (collIter.hasNext())
+                {
+                    Object element = collIter.next();
+                    Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                    Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
+                    collIds.add(elementID);
+                }
+
                 if (mmd.isSerialized())
                 {
                     // Persist as serialised into the column of this object
@@ -295,214 +327,198 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 }
                 else
                 {
-                    // Persist identity in the column of this object
-                    Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
-                    writeObjectField(familyName, qualifName, valueId);
+                    // Persist list<ids> into the column of this object
+                    writeObjectField(familyName, qualifName, collIds);
+                }
+                op.wrapSCOField(fieldNumber, value, false, false, true);
+            }
+            else if (mmd.hasMap())
+            {
+                Map mapIds = new HashMap();
+                Map map = (Map)value;
+                Iterator<Map.Entry> mapIter = map.entrySet().iterator();
+                while (mapIter.hasNext())
+                {
+                    Map.Entry entry = mapIter.next();
+                    Object mapKey = entry.getKey();
+                    Object mapValue = entry.getValue();
+                    if (ec.getApiAdapter().isPersistable(mapKey))
+                    {
+                        Object pKey = ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
+                        mapKey = ec.getApiAdapter().getIdForObject(pKey);
+                    }
+                    if (ec.getApiAdapter().isPersistable(mapValue))
+                    {
+                        Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
+                        mapValue = ec.getApiAdapter().getIdForObject(pVal);
+                    }
+                    mapIds.put(mapKey, mapValue);
+                }
+
+                if (mmd.isSerialized())
+                {
+                    // Persist as serialised into the column of this object
+                    writeObjectField(familyName, qualifName, value);
+                }
+                else
+                {
+                    // Persist map<keyids,valids> into the column of this object
+                    writeObjectField(familyName, qualifName, mapIds);
+                }
+                op.wrapSCOField(fieldNumber, value, false, false, true);
+            }
+            else if (mmd.hasArray())
+            {
+                Collection arrIds = new ArrayList();
+                for (int i=0;i<Array.getLength(value);i++)
+                {
+                    Object element = Array.get(value, i);
+                    Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                    Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
+                    arrIds.add(elementID);
+                }
+
+                if (mmd.isSerialized())
+                {
+                    // Persist as serialised into the column of this object
+                    writeObjectField(familyName, qualifName, value);
+                }
+                else
+                {
+                    // Persist list of array element ids into the column of this object
+                    writeObjectField(familyName, qualifName, arrIds);
                 }
             }
-            else if (RelationType.isRelationMultiValued(relationType))
+        }
+        else
+        {
+            // Non-relational field
+            if (value == null)
             {
-                // Collection/Map/Array
+                for (int i=0;i<mapping.getNumberOfColumns();i++)
+                {
+                    Column col = mapping.getColumn(i);
+                    delete.deleteColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
+                }
+                return;
+            }
+
+            if (mmd.isSerialized())
+            {
+                // Persist serialised
                 Column col = mapping.getColumn(0);
                 String familyName = HBaseUtils.getFamilyNameForColumn(col);
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                if (mmd.hasCollection())
-                {
-                    Collection collIds = new ArrayList();
-                    Collection coll = (Collection)value;
-                    Iterator collIter = coll.iterator();
-                    while (collIter.hasNext())
-                    {
-                        Object element = collIter.next();
-                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
-                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                        collIds.add(elementID);
-                    }
 
-                    if (mmd.isSerialized())
-                    {
-                        // Persist as serialised into the column of this object
-                        writeObjectField(familyName, qualifName, value);
-                    }
-                    else
-                    {
-                        // Persist list<ids> into the column of this object
-                        writeObjectField(familyName, qualifName, collIds);
-                    }
-                    op.wrapSCOField(fieldNumber, value, false, false, true);
-                }
-                else if (mmd.hasMap())
-                {
-                    Map mapIds = new HashMap();
-                    Map map = (Map)value;
-                    Iterator<Map.Entry> mapIter = map.entrySet().iterator();
-                    while (mapIter.hasNext())
-                    {
-                        Map.Entry entry = mapIter.next();
-                        Object mapKey = entry.getKey();
-                        Object mapValue = entry.getValue();
-                        if (ec.getApiAdapter().isPersistable(mapKey))
-                        {
-                            Object pKey = ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
-                            mapKey = ec.getApiAdapter().getIdForObject(pKey);
-                        }
-                        if (ec.getApiAdapter().isPersistable(mapValue))
-                        {
-                            Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
-                            mapValue = ec.getApiAdapter().getIdForObject(pVal);
-                        }
-                        mapIds.put(mapKey, mapValue);
-                    }
-
-                    if (mmd.isSerialized())
-                    {
-                        // Persist as serialised into the column of this object
-                        writeObjectField(familyName, qualifName, value);
-                    }
-                    else
-                    {
-                        // Persist map<keyids,valids> into the column of this object
-                        writeObjectField(familyName, qualifName, mapIds);
-                    }
-                    op.wrapSCOField(fieldNumber, value, false, false, true);
-                }
-                else if (mmd.hasArray())
-                {
-                    Collection arrIds = new ArrayList();
-                    for (int i=0;i<Array.getLength(value);i++)
-                    {
-                        Object element = Array.get(value, i);
-                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
-                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                        arrIds.add(elementID);
-                    }
-
-                    if (mmd.isSerialized())
-                    {
-                        // Persist as serialised into the column of this object
-                        writeObjectField(familyName, qualifName, value);
-                    }
-                    else
-                    {
-                        // Persist list of array element ids into the column of this object
-                        writeObjectField(familyName, qualifName, arrIds);
-                    }
-                }
+                writeObjectField(familyName, qualifName, value);
+                op.wrapSCOField(fieldNumber, value, false, false, true);
+                return;
             }
             else
             {
+                if (mapping.getTypeConverter() != null)
+                {
+                    // Persist using the provided converter
+                    Object datastoreValue = mapping.getTypeConverter().toDatastoreType(value);
+                    if (mapping.getNumberOfColumns() > 1)
+                    {
+                        // Multicolumn, so add value for each column
+                        for (int i=0;i<mapping.getNumberOfColumns();i++)
+                        {
+                            Column col = mapping.getColumn(i);
+                            Object colValue = Array.get(datastoreValue, i);
+                            byte[] valueColBytes = getPersistableBytesForObject(col, colValue);
+                            // TODO What if valueColBytes is null, provide mechanism to serialise?
+                            put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
+                        }
+                    }
+                    else
+                    {
+                        Column col = mapping.getColumn(0);
+                        byte[] valueColBytes = getPersistableBytesForObject(col, value);
+                        put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
+                    }
+                    return;
+                }
+
                 Column col = mapping.getColumn(0);
                 String familyName = HBaseUtils.getFamilyNameForColumn(col);
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                if (!mmd.isSerialized())
-                {
-                    // TODO Support multicolumn converters
-                    if (mmd.getTypeConverterName() != null)
-                    {
-                        // User-defined converter
-                        TypeManager typeMgr = ec.getNucleusContext().getTypeManager();
-                        TypeConverter conv = typeMgr.getTypeConverterForName(mmd.getTypeConverterName());
-                        Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
-                        if (datastoreType == String.class)
-                        {
-                            String strValue = (String)conv.toDatastoreType(value);
-                            put.add(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
-                            return;
-                        }
-                        else if (datastoreType == Boolean.class)
-                        {
-                            storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
-                            return;
-                        }
-                        else if (datastoreType == Double.class)
-                        {
-                            storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
-                            return;
-                        }
-                        else if (datastoreType == Integer.class)
-                        {
-                            storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
-                            return;
-                        }
-                        else if (datastoreType == Long.class)
-                        {
-                            storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
-                            return;
-                        }
-                    }
-                    if (Boolean.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Byte.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeByteInternal(familyName, qualifName, (Byte)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Character.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeCharInternal(familyName, qualifName, (Character)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Double.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Float.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeFloatInternal(familyName, qualifName, (Float)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Integer.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Long.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Short.class.isAssignableFrom(value.getClass()))
-                    {
-                        storeShortInternal(familyName, qualifName, (Short)value, mmd.isSerialized());
-                        return;
-                    }
-                    else if (Enum.class.isAssignableFrom(value.getClass()))
-                    {
-                        ColumnMetaData colmd = null;
-                        if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
-                        {
-                            colmd = mmd.getColumnMetaData()[0];
-                        }
-                        if (MetaDataUtils.persistColumnAsNumeric(colmd))
-                        {
-                            put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
-                        }
-                        else
-                        {
-                            put.add(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
-                        }
-                        return;
-                    }
 
-                    // Fallback to built-in String converters
-                    // TODO Make use of default TypeConverter for a type before falling back to String/Long
-                    TypeConverter strConv = ec.getNucleusContext().getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
-                    if (strConv != null)
+                if (Boolean.class.isAssignableFrom(value.getClass()))
+                {
+                    storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Byte.class.isAssignableFrom(value.getClass()))
+                {
+                    storeByteInternal(familyName, qualifName, (Byte)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Character.class.isAssignableFrom(value.getClass()))
+                {
+                    storeCharInternal(familyName, qualifName, (Character)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Double.class.isAssignableFrom(value.getClass()))
+                {
+                    storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Float.class.isAssignableFrom(value.getClass()))
+                {
+                    storeFloatInternal(familyName, qualifName, (Float)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Integer.class.isAssignableFrom(value.getClass()))
+                {
+                    storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Long.class.isAssignableFrom(value.getClass()))
+                {
+                    storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Short.class.isAssignableFrom(value.getClass()))
+                {
+                    storeShortInternal(familyName, qualifName, (Short)value, mmd.isSerialized());
+                    return;
+                }
+                else if (Enum.class.isAssignableFrom(value.getClass()))
+                {
+                    ColumnMetaData colmd = null;
+                    if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
                     {
-                        // Persist as a String
-                        String strValue = (String)strConv.toDatastoreType(value);
-                        put.add(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
-                        return;
+                        colmd = mmd.getColumnMetaData()[0];
                     }
+                    if (MetaDataUtils.persistColumnAsNumeric(colmd))
+                    {
+                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
+                    }
+                    else
+                    {
+                        put.add(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
+                    }
+                    return;
                 }
 
-                // Persist serialised
-                writeObjectField(familyName, qualifName, value);
-                op.wrapSCOField(fieldNumber, value, false, false, true);
+                // Fallback to built-in String converters
+                // TODO Make use of default TypeConverter for a type before falling back to String/Long
+                TypeConverter strConv = ec.getNucleusContext().getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
+                if (strConv != null)
+                {
+                    // Persist as a String
+                    String strValue = (String)strConv.toDatastoreType(value);
+                    put.add(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
+                    return;
+                }
+                else
+                {
+                    // Fallback to serialised
+                    writeObjectField(familyName, qualifName, value);
+                    op.wrapSCOField(fieldNumber, value, false, false, true);
+                }
             }
         }
     }
@@ -702,5 +718,66 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
-   }
+    }
+
+    protected byte[] getPersistableBytesForObject(Column col, Object value)
+    {
+        if (Boolean.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((Boolean)value);
+        }
+        else if (Byte.class.isAssignableFrom(value.getClass()))
+        {
+            return new byte[]{(Byte) value};
+        }
+        else if (Character.class.isAssignableFrom(value.getClass()))
+        {
+            return ("" + value).getBytes();
+        }
+        else if (Double.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((Double)value);
+        }
+        else if (Float.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((Float)value);
+        }
+        else if (Integer.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((Integer)value);
+        }
+        else if (Long.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((Long)value);
+        }
+        else if (Short.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((Short)value);
+        }
+        else if (BigDecimal.class.isAssignableFrom(value.getClass()))
+        {
+            return Bytes.toBytes((BigDecimal)value);
+        }
+        else if (String.class.isAssignableFrom(value.getClass()))
+        {
+            return ((String)value).getBytes();
+        }
+        else if (Enum.class.isAssignableFrom(value.getClass()))
+        {
+            ColumnMetaData colmd = col.getColumnMetaData();
+            if (MetaDataUtils.persistColumnAsNumeric(colmd))
+            {
+                return Bytes.toBytes(((Enum)value).ordinal());
+            }
+            else
+            {
+                return ((Enum)value).name().getBytes();
+            }
+        }
+        else
+        {
+            NucleusLogger.PERSISTENCE.warn("Persistence of column " + col + " has value of type " + value.getClass().getName() + " but no conversion to bytes defined. Report this");
+        }
+        return null;
+    }
 }

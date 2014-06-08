@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Array;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -49,8 +50,10 @@ import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
+import org.datanucleus.store.types.converters.MultiColumnConverter;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.store.types.converters.TypeConverterHelper;
+import org.datanucleus.util.NucleusLogger;
 
 /**
  * FieldManager to use for retrieving values from HBase to put into a persistable object.
@@ -261,17 +264,17 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         int fieldNumber = mmd.getAbsoluteFieldNumber();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
-        Column col = mapping.getColumn(0); // TODO Support multicolumn converters
-        String familyName = HBaseUtils.getFamilyNameForColumn(col);
-        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-        Object value = readObjectField(familyName, qualifName, result, fieldNumber, mmd);
-        if (value == null)
-        {
-            return null;
-        }
-
         if (RelationType.isRelationSingleValued(relationType))
         {
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+            Object value = readObjectField(col, familyName, qualifName, result, mmd);
+            if (value == null)
+            {
+                return null;
+            }
+
             if (mmd.isSerialized())
             {
                 return value;
@@ -284,13 +287,22 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+            Object value = readObjectField(col, familyName, qualifName, result, mmd);
+            if (value == null)
+            {
+                return null;
+            }
+
+            if (mmd.isSerialized())
+            {
+                return value;
+            }
+
             if (mmd.hasCollection())
             {
-                if (mmd.isSerialized())
-                {
-                    return value;
-                }
-
                 Collection<Object> coll;
                 try
                 {
@@ -317,11 +329,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
             else if (mmd.hasMap())
             {
-                if (mmd.isSerialized())
-                {
-                    return value;
-                }
-
                 Map map;
                 try
                 {
@@ -360,11 +367,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
             else if (mmd.hasArray())
             {
-                if (mmd.isSerialized())
-                {
-                    return value;
-                }
-
                 Collection arrIds = (Collection)value;
                 Object array = Array.newInstance(mmd.getType().getComponentType(), arrIds.size());
                 Iterator idIter = arrIds.iterator();
@@ -380,37 +382,179 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
         else
         {
-            Object returnValue = value;
-            if (!mmd.isSerialized())
+            Object returnValue = null;
+            if (mmd.isSerialized())
             {
-                if (mmd.getTypeConverterName() != null)
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                if (value == null)
                 {
-                    // User-defined type converter
-                    byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
+                    return null;
+                }
+
+                returnValue = value;
+            }
+            else
+            {
+                if (mapping.getTypeConverter() != null)
+                {
+                    // Persist using the provided converter
                     TypeConverter conv = ec.getNucleusContext().getTypeManager().getTypeConverterForName(mmd.getTypeConverterName());
-                    Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
-                    if (datastoreType == String.class)
+                    if (mapping.getNumberOfColumns() > 1)
                     {
-                        returnValue = conv.toMemberType((String)value);
+                        boolean isNull = true;
+                        Object valuesArr = null;
+                        Class[] colTypes = ((MultiColumnConverter)conv).getDatastoreColumnTypes();
+                        if (colTypes[0] == int.class)
+                        {
+                            valuesArr = new int[mapping.getNumberOfColumns()];
+                        }
+                        else if (colTypes[0] == long.class)
+                        {
+                            valuesArr = new long[mapping.getNumberOfColumns()];
+                        }
+                        else if (colTypes[0] == double.class)
+                        {
+                            valuesArr = new double[mapping.getNumberOfColumns()];
+                        }
+                        else if (colTypes[0] == float.class)
+                        {
+                            valuesArr = new double[mapping.getNumberOfColumns()];
+                        }
+                        else if (colTypes[0] == String.class)
+                        {
+                            valuesArr = new String[mapping.getNumberOfColumns()];
+                        }
+                        // TODO Support other types
+                        else
+                        {
+                            valuesArr = new Object[mapping.getNumberOfColumns()];
+                        }
+
+                        for (int i=0;i<mapping.getNumberOfColumns();i++)
+                        {
+                            Column col = mapping.getColumn(i);
+                            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                            Object colValue = null;
+                            if (!result.containsColumn(familyName.getBytes(), qualifName.getBytes()))
+                            {
+                                colValue = null;
+                            }
+                            else
+                            {
+                                byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
+                                if (bytes == null)
+                                {
+                                    colValue = null;
+                                }
+                                else
+                                {
+                                    isNull = false;
+                                    if (colTypes[i] == String.class)
+                                    {
+                                        colValue = new String(bytes);
+                                    }
+                                    else if (colTypes[i] == Integer.class || colTypes[i] == int.class)
+                                    {
+                                        colValue = Bytes.toInt(bytes);
+                                    }
+                                    else if (colTypes[i] == Long.class || colTypes[i] == long.class)
+                                    {
+                                        colValue = Bytes.toLong(bytes);
+                                    }
+                                    else if (colTypes[i] == Double.class || colTypes[i] == double.class)
+                                    {
+                                        colValue = Bytes.toDouble(bytes);
+                                    }
+                                    else if (colTypes[i] == Float.class || colTypes[i] == float.class)
+                                    {
+                                        colValue = Bytes.toFloat(bytes);
+                                    }
+                                    else if (colTypes[i] == Short.class || colTypes[i] == short.class)
+                                    {
+                                        colValue = Bytes.toShort(bytes);
+                                    }
+                                    else if (colTypes[i] == Boolean.class || colTypes[i] == boolean.class)
+                                    {
+                                        colValue = Bytes.toBoolean(bytes);
+                                    }
+                                    else if (colTypes[i] == BigDecimal.class)
+                                    {
+                                        colValue = Bytes.toBigDecimal(bytes);
+                                    }
+                                    else
+                                    {
+                                        NucleusLogger.PERSISTENCE.warn("Retrieve of column " + col + " is for type " + colTypes[i] + " but this is not yet supported. Report this");
+                                    }
+                                }
+                            }
+                            Array.set(valuesArr, i, colValue);
+                        }
+                        if (isNull)
+                        {
+                            return null;
+                        }
+
+                        Object memberValue = conv.toMemberType(valuesArr);
+                        if (op != null && memberValue != null)
+                        {
+                            memberValue = op.wrapSCOField(fieldNumber, memberValue, false, false, true);
+                        }
+                        return memberValue;
                     }
-                    else if (datastoreType == Long.class)
+                    else
                     {
-                        returnValue = conv.toMemberType(Bytes.toLong(bytes));
-                    }
-                    else if (datastoreType == Integer.class)
-                    {
-                        returnValue = conv.toMemberType(Bytes.toInt(bytes));
-                    }
-                    else if (datastoreType == Double.class)
-                    {
-                        returnValue = conv.toMemberType(Bytes.toDouble(bytes));
-                    }
-                    else if (datastoreType == Boolean.class)
-                    {
-                        returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
+                        Column col = mapping.getColumn(0);
+                        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                        Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                        if (value == null)
+                        {
+                            return null;
+                        }
+
+                        byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
+                        Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
+                        if (datastoreType == String.class)
+                        {
+                            returnValue = conv.toMemberType((String)value);
+                        }
+                        else if (datastoreType == Long.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toLong(bytes));
+                        }
+                        else if (datastoreType == Integer.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toInt(bytes));
+                        }
+                        else if (datastoreType == Double.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toDouble(bytes));
+                        }
+                        else if (datastoreType == Boolean.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
+                        }
+                        // TODO Cater for other types
                     }
                 }
-                else if (Boolean.class.isAssignableFrom(mmd.getType()) ||
+                else
+                {
+                    Column col = mapping.getColumn(0);
+                    String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                    Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                    if (value == null)
+                    {
+                        return null;
+                    }
+
+                    returnValue = value;
+
+                    if (Boolean.class.isAssignableFrom(mmd.getType()) ||
                         Byte.class.isAssignableFrom(mmd.getType()) ||
                         Integer.class.isAssignableFrom(mmd.getType()) ||
                         Double.class.isAssignableFrom(mmd.getType()) ||
@@ -418,35 +562,32 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         Long.class.isAssignableFrom(mmd.getType()) ||
                         Character.class.isAssignableFrom(mmd.getType()) ||
                         Short.class.isAssignableFrom(mmd.getType()))
-                {
-                    return value;
-                }
-                else if (Enum.class.isAssignableFrom(mmd.getType()))
-                {
-                    ColumnMetaData colmd = null;
-                    if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
                     {
-                        colmd = mmd.getColumnMetaData()[0];
+                        return value;
                     }
-                    if (MetaDataUtils.persistColumnAsNumeric(colmd))
+                    else if (Enum.class.isAssignableFrom(mmd.getType()))
                     {
-                        return mmd.getType().getEnumConstants()[((Number)value).intValue()];
+                        ColumnMetaData colmd = col.getColumnMetaData();
+                        if (MetaDataUtils.persistColumnAsNumeric(colmd))
+                        {
+                            return mmd.getType().getEnumConstants()[((Number)value).intValue()];
+                        }
+                        else
+                        {
+                            return Enum.valueOf(mmd.getType(), (String)value);
+                        }
                     }
                     else
                     {
-                        return Enum.valueOf(mmd.getType(), (String)value);
-                    }
-                }
-                else
-                {
-                    // Fallback to built-in type converter
-                    // TODO Make use of default TypeConverter for a type before falling back to String/Long
-                    TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
-                    if (strConv != null)
-                    {
-                        // Persisted as a String, so convert back
-                        String strValue = (String)value;
-                        returnValue = strConv.toMemberType(strValue);
+                        // Fallback to built-in type converter
+                        // TODO Make use of default TypeConverter for a type before falling back to String/Long
+                        TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
+                        if (strConv != null)
+                        {
+                            // Persisted as a String, so convert back
+                            String strValue = (String)value;
+                            returnValue = strConv.toMemberType(strValue);
+                        }
                     }
                 }
             }
@@ -458,9 +599,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
     }
 
-    protected Object readObjectField(String familyName, String columnName, Result result, int fieldNumber, AbstractMemberMetaData mmd)
+    protected Object readObjectField(Column col, String familyName, String qualifName, Result result, AbstractMemberMetaData mmd)
     {
-        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
         if (bytes == null)
         {
             return null;
