@@ -274,23 +274,20 @@ public class JPQLQuery extends AbstractJPQLQuery
                         filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                     }
                 }
-                if (datastoreCompilation != null)
+                if (datastoreCompilation != null && datastoreCompilation.isFilterComplete())
                 {
-                    if (datastoreCompilation.isFilterComplete())
+                    HBaseBooleanExpression userFilterExpr = datastoreCompilation.getFilterExpression();
+                    if (filterExpr == null)
                     {
-                        HBaseBooleanExpression userFilterExpr = datastoreCompilation.getFilterExpression();
-                        if (filterExpr == null)
-                        {
-                            filterExpr = userFilterExpr;
-                        }
-                        else if (userFilterExpr == null)
-                        {
-                            // Nothing to do
-                        }
-                        else
-                        {
-                            filterExpr = new HBaseBooleanExpression(filterExpr, userFilterExpr, Expression.OP_AND);
-                        }
+                        filterExpr = userFilterExpr;
+                    }
+                    else if (userFilterExpr == null)
+                    {
+                        // Nothing to do
+                    }
+                    else
+                    {
+                        filterExpr = new HBaseBooleanExpression(filterExpr, userFilterExpr, Expression.OP_AND);
                     }
                 }
 
@@ -299,8 +296,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                     filter = filterExpr.getFilter();
                 }
 
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses,
-                    ignoreCache, getFetchPlan(), filter, storeMgr);
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses, ignoreCache, getFetchPlan(), filter, storeMgr);
                 if (filter != null && datastoreCompilation.isFilterComplete())
                 {
                     filterInMemory = false;
@@ -308,14 +304,12 @@ public class JPQLQuery extends AbstractJPQLQuery
             }
 
             // Apply any result restrictions to the results
-            JavaQueryEvaluator resultMapper = new JPQLEvaluator(this, candidates, compilation, 
-                parameters, ec.getClassLoaderResolver());
+            JavaQueryEvaluator resultMapper = new JPQLEvaluator(this, candidates, compilation, parameters, ec.getClassLoaderResolver());
             Collection results = resultMapper.execute(filterInMemory, true, true, true, true);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JPQL", 
-                    "" + (System.currentTimeMillis() - startTime)));
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JPQL", "" + (System.currentTimeMillis() - startTime)));
             }
 
             if (type == BULK_DELETE)

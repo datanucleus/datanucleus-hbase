@@ -81,7 +81,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         MetaDataManager mmgr = nucleusContext.getMetaDataManager();
         mmgr.registerListener(metadataListener);
         Collection<String> classNamesLoaded = mmgr.getClassesWithMetaData();
-        if (classNamesLoaded != null && classNamesLoaded.size() > 0)
+        if (classNamesLoaded != null && !classNamesLoaded.isEmpty())
         {
             Iterator<String> iter = classNamesLoaded.iterator();
             while (iter.hasNext())

@@ -109,6 +109,8 @@ public class MetaDataExtensionParser
                         case TIME_TO_LIVE:
                             ttlPerCf.put(cf, toInteger(value));
                             break;
+                        default:
+                            break;
                     }
                     extensionsFound = true;
                 }

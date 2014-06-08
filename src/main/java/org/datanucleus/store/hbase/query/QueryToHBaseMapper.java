@@ -431,7 +431,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
 
         Object paramValue = null;
         boolean paramValueSet = false;
-        if (parameters != null && parameters.size() > 0)
+        if (parameters != null && !parameters.isEmpty())
         {
             // Check if the parameter has a value
             if (parameters.containsKey(expr.getId()))
@@ -468,15 +468,12 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             }
         }
 
-        if (paramValueSet)
+        if (paramValueSet && (paramValue instanceof Number || paramValue instanceof String))
         {
-            if (paramValue instanceof Number || paramValue instanceof String)
-            {
-                HBaseLiteral paramLit = new HBaseLiteral(paramValue);
-                precompilable = false;
-                stack.push(paramLit);
-                return paramLit;
-            }
+            HBaseLiteral paramLit = new HBaseLiteral(paramValue);
+            precompilable = false;
+            stack.push(paramLit);
+            return paramLit;
         }
 
         // TODO Auto-generated method stub
@@ -507,7 +504,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
         return super.processLiteral(expr);
     }
 
-    class PrimaryDetails
+    static class PrimaryDetails
     {
         String family;
         String column;
@@ -529,7 +526,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
      */
     protected PrimaryDetails getFamilyColumnNameForPrimary(List<String> tuples)
     {
-        if (tuples == null || tuples.size() == 0)
+        if (tuples == null || tuples.isEmpty())
         {
             return null;
         }

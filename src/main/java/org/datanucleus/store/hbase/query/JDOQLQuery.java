@@ -273,23 +273,20 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                         filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                     }
                 }
-                if (datastoreCompilation != null)
+                if (datastoreCompilation != null && datastoreCompilation.isFilterComplete())
                 {
-                    if (datastoreCompilation.isFilterComplete())
+                    HBaseBooleanExpression userFilterExpr = datastoreCompilation.getFilterExpression();
+                    if (filterExpr == null)
                     {
-                        HBaseBooleanExpression userFilterExpr = datastoreCompilation.getFilterExpression();
-                        if (filterExpr == null)
-                        {
-                            filterExpr = userFilterExpr;
-                        }
-                        else if (userFilterExpr == null)
-                        {
-                            // Nothing to do
-                        }
-                        else
-                        {
-                            filterExpr = new HBaseBooleanExpression(filterExpr, userFilterExpr, Expression.OP_AND);
-                        }
+                        filterExpr = userFilterExpr;
+                    }
+                    else if (userFilterExpr == null)
+                    {
+                        // Nothing to do
+                    }
+                    else
+                    {
+                        filterExpr = new HBaseBooleanExpression(filterExpr, userFilterExpr, Expression.OP_AND);
                     }
                 }
 

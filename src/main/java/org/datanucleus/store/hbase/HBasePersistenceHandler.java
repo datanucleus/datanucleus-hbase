@@ -682,19 +682,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
                 String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
                 Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
-                if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
+                if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME && !cmd.getFullClassName().equals(discValue))
                 {
-                    if (!cmd.getFullClassName().equals(discValue))
-                    {
-                        throw new NucleusObjectNotFoundException();
-                    }
+                    throw new NucleusObjectNotFoundException();
                 }
-                else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.VALUE_MAP)
+                else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.VALUE_MAP && !cmd.getDiscriminatorValue().equals(discValue))
                 {
-                    if (!cmd.getDiscriminatorValue().equals(discValue))
-                    {
-                        throw new NucleusObjectNotFoundException();
-                    }
+                    throw new NucleusObjectNotFoundException();
                 }
             }
 

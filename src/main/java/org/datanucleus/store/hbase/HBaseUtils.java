@@ -51,6 +51,8 @@ import org.datanucleus.store.types.converters.TypeConverter;
 
 public class HBaseUtils
 {
+    private HBaseUtils() {}
+
     /**
      * Accessor for the default value specified for the provided member.
      * If no defaultValue is provided on the column then returns null.

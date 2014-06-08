@@ -49,14 +49,14 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 
     public HBaseManagedConnection(HConnection hconn)
     {
-    	this.hconn = hconn;
-    	this.tables = new HashMap<String, HTableInterface>();
-    	disableExpirationTime();
+        this.hconn = hconn;
+        this.tables = new HashMap<String, HTableInterface>();
+        disableExpirationTime();
     }
 
     public Object getConnection()
     {
-    	throw new NucleusDataStoreException("Unsupported Exception #getConnection() for " + this.getClass().getName());
+        throw new NucleusDataStoreException("Unsupported Exception #getConnection() for " + this.getClass().getName());
     }
 
     public HTableInterface getHTable(String tableName)
@@ -69,8 +69,8 @@ public class HBaseManagedConnection extends AbstractManagedConnection
                 table = hconn.getTable(tableName);
                 tables.put(tableName, table);
             }
-        	catch (Exception e)
-        	{
+            catch (Exception e)
+            {
                 throw new NucleusDataStoreException("Exception obtaining HTableInterface from HConnection for table=" + tableName, e);
             }
         }
@@ -84,7 +84,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 
     public void close()
     {
-        for (ManagedConnectionResourceListener listener : listeners) 
+        for (ManagedConnectionResourceListener listener : listeners)
         {
             listener.managedConnectionPreClose();
         }
@@ -129,36 +129,36 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         super.release();
         if (useCount == 0)
         {
-        	enableExpirationTime();
+            enableExpirationTime();
         }
     }
 
     private void enableExpirationTime()
     {
-    	this.expirationTime = System.currentTimeMillis() + idleTimeoutMills;
+        this.expirationTime = System.currentTimeMillis() + idleTimeoutMills;
     }
 
     private void disableExpirationTime()
     {
-    	this.expirationTime = -1;
+        this.expirationTime = -1;
     }
 
     public void setIdleTimeoutMills(int mills)
     {
-    	this.idleTimeoutMills = mills;
+        this.idleTimeoutMills = mills;
     }
 
     public boolean isExpired()
     {
-    	return expirationTime > 0  &&  expirationTime > System.currentTimeMillis();
+        return expirationTime > 0 && expirationTime > System.currentTimeMillis();
     }
 
     public void dispose()
     {
-    	isDisposed = true;
-    	if (!hconn.isClosed())
-    	{
-    	    try
+        isDisposed = true;
+        if (!hconn.isClosed())
+        {
+            try
             {
                 hconn.close();
             }
@@ -166,11 +166,11 @@ public class HBaseManagedConnection extends AbstractManagedConnection
             {
                 throw new NucleusDataStoreException("Exception thrown closing HConnection", e);
             }
-    	}
+        }
     }
 
     public boolean isDisposed()
     {
-    	return isDisposed;
+        return isDisposed;
     }
 }
