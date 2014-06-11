@@ -47,6 +47,7 @@ import org.datanucleus.util.NucleusLogger;
  */
 public class JDOQLQuery extends AbstractJDOQLQuery
 {
+    private static final long serialVersionUID = 8872448483387918589L;
     /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient HBaseQueryCompilation datastoreCompilation;
 
