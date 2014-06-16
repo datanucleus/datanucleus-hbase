@@ -211,7 +211,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     // Version stored in field, so update the field
                     AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                    Object verFieldValue = (Long)nextVersion;
+                    Object verFieldValue = nextVersion;
                     if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
                     {
                         verFieldValue = Integer.valueOf(((Long)nextVersion).intValue());

@@ -171,10 +171,8 @@ public class HBaseUtils
                 }
                 return version;
             }
-            else
-            {
-                return getSurrogateVersionForObject(cmd, result, tableName, storeMgr);
-            }
+
+            return getSurrogateVersionForObject(cmd, result, tableName, storeMgr);
         }
         return null;
     }

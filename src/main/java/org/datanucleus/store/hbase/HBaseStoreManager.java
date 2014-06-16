@@ -100,7 +100,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         this.connectionMgr.disableConnectionPool();
     }
 
-    public void close()
+    public synchronized void close()
     {
         nucleusContext.getMetaDataManager().deregisterListener(metadataListener);
         super.close();

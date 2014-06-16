@@ -255,11 +255,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
             }
-            else
-            {
-                // Embedded collection/map/array
-                throw new NucleusUserException("Field " + mmd.getFullFieldName() + " specified as embedded but field of this type not suppported. Mark as not persistent? or not embedded?");
-            }
+
+            // Embedded collection/map/array
+            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " specified as embedded but field of this type not suppported. Mark as not persistent? or not embedded?");
         }
 
         storeNonEmbeddedObjectField(mmd, relationType, clr, value);
@@ -414,112 +412,108 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 op.wrapSCOField(fieldNumber, value, false, false, true);
                 return;
             }
-            else
+
+            if (mapping.getTypeConverter() != null)
             {
-                if (mapping.getTypeConverter() != null)
+                // Persist using the provided converter
+                Object datastoreValue = mapping.getTypeConverter().toDatastoreType(value);
+                if (mapping.getNumberOfColumns() > 1)
                 {
-                    // Persist using the provided converter
-                    Object datastoreValue = mapping.getTypeConverter().toDatastoreType(value);
-                    if (mapping.getNumberOfColumns() > 1)
+                    // Multicolumn, so add value for each column
+                    for (int i=0;i<mapping.getNumberOfColumns();i++)
                     {
-                        // Multicolumn, so add value for each column
-                        for (int i=0;i<mapping.getNumberOfColumns();i++)
-                        {
-                            Column col = mapping.getColumn(i);
-                            Object colValue = Array.get(datastoreValue, i);
-                            byte[] valueColBytes = getPersistableBytesForObject(col, colValue);
-                            // TODO What if valueColBytes is null, provide mechanism to serialise?
-                            put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
-                        }
-                    }
-                    else
-                    {
-                        Column col = mapping.getColumn(0);
-                        byte[] valueColBytes = getPersistableBytesForObject(col, value);
+                        Column col = mapping.getColumn(i);
+                        Object colValue = Array.get(datastoreValue, i);
+                        byte[] valueColBytes = getPersistableBytesForObject(col, colValue);
+                        // TODO What if valueColBytes is null, provide mechanism to serialise?
                         put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
                     }
-                    return;
-                }
-
-                Column col = mapping.getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-
-                if (Boolean.class.isAssignableFrom(value.getClass()))
-                {
-                    storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Byte.class.isAssignableFrom(value.getClass()))
-                {
-                    storeByteInternal(familyName, qualifName, (Byte)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Character.class.isAssignableFrom(value.getClass()))
-                {
-                    storeCharInternal(familyName, qualifName, (Character)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Double.class.isAssignableFrom(value.getClass()))
-                {
-                    storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Float.class.isAssignableFrom(value.getClass()))
-                {
-                    storeFloatInternal(familyName, qualifName, (Float)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Integer.class.isAssignableFrom(value.getClass()))
-                {
-                    storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Long.class.isAssignableFrom(value.getClass()))
-                {
-                    storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Short.class.isAssignableFrom(value.getClass()))
-                {
-                    storeShortInternal(familyName, qualifName, (Short)value, mmd.isSerialized());
-                    return;
-                }
-                else if (Enum.class.isAssignableFrom(value.getClass()))
-                {
-                    ColumnMetaData colmd = null;
-                    if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
-                    {
-                        colmd = mmd.getColumnMetaData()[0];
-                    }
-                    if (MetaDataUtils.persistColumnAsNumeric(colmd))
-                    {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
-                    }
-                    else
-                    {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
-                    }
-                    return;
-                }
-
-                // Fallback to built-in String converters
-                // TODO Make use of default TypeConverter for a type before falling back to String/Long
-                TypeConverter strConv = ec.getNucleusContext().getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
-                if (strConv != null)
-                {
-                    // Persist as a String
-                    String strValue = (String)strConv.toDatastoreType(value);
-                    put.add(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
-                    return;
                 }
                 else
                 {
-                    // Fallback to serialised
-                    writeObjectField(familyName, qualifName, value);
-                    op.wrapSCOField(fieldNumber, value, false, false, true);
+                    Column col = mapping.getColumn(0);
+                    byte[] valueColBytes = getPersistableBytesForObject(col, value);
+                    put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
                 }
+                return;
             }
+
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+
+            if (Boolean.class.isAssignableFrom(value.getClass()))
+            {
+                storeBooleanInternal(familyName, qualifName, (Boolean)value, mmd.isSerialized());
+                return;
+            }
+            else if (Byte.class.isAssignableFrom(value.getClass()))
+            {
+                storeByteInternal(familyName, qualifName, (Byte)value, mmd.isSerialized());
+                return;
+            }
+            else if (Character.class.isAssignableFrom(value.getClass()))
+            {
+                storeCharInternal(familyName, qualifName, (Character)value, mmd.isSerialized());
+                return;
+            }
+            else if (Double.class.isAssignableFrom(value.getClass()))
+            {
+                storeDoubleInternal(familyName, qualifName, (Double)value, mmd.isSerialized());
+                return;
+            }
+            else if (Float.class.isAssignableFrom(value.getClass()))
+            {
+                storeFloatInternal(familyName, qualifName, (Float)value, mmd.isSerialized());
+                return;
+            }
+            else if (Integer.class.isAssignableFrom(value.getClass()))
+            {
+                storeIntInternal(familyName, qualifName, (Integer)value, mmd.isSerialized());
+                return;
+            }
+            else if (Long.class.isAssignableFrom(value.getClass()))
+            {
+                storeLongInternal(familyName, qualifName, (Long)value, mmd.isSerialized());
+                return;
+            }
+            else if (Short.class.isAssignableFrom(value.getClass()))
+            {
+                storeShortInternal(familyName, qualifName, (Short)value, mmd.isSerialized());
+                return;
+            }
+            else if (Enum.class.isAssignableFrom(value.getClass()))
+            {
+                ColumnMetaData colmd = null;
+                if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
+                {
+                    colmd = mmd.getColumnMetaData()[0];
+                }
+                if (MetaDataUtils.persistColumnAsNumeric(colmd))
+                {
+                    put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
+                }
+                else
+                {
+                    put.add(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
+                }
+                return;
+            }
+
+            // Fallback to built-in String converters
+            // TODO Make use of default TypeConverter for a type before falling back to String/Long
+            TypeConverter strConv = ec.getNucleusContext().getTypeManager().getTypeConverterForType(mmd.getType(), String.class);
+            if (strConv != null)
+            {
+                // Persist as a String
+                String strValue = (String)strConv.toDatastoreType(value);
+                put.add(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
+                return;
+            }
+
+            // Fallback to serialised
+            writeObjectField(familyName, qualifName, value);
+            op.wrapSCOField(fieldNumber, value, false, false, true);
         }
     }
 
@@ -769,10 +763,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             {
                 return Bytes.toBytes(((Enum)value).ordinal());
             }
-            else
-            {
-                return ((Enum)value).name().getBytes();
-            }
+
+            return ((Enum)value).name().getBytes();
         }
         else
         {

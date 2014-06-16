@@ -103,15 +103,13 @@ public class JPQLQuery extends AbstractJPQLQuery
             // Don't need datastore compilation here since evaluating in-memory
             return compilation != null;
         }
-        else
+
+        // Need both to be present to say "compiled"
+        if (compilation == null || datastoreCompilation == null)
         {
-            // Need both to be present to say "compiled"
-            if (compilation == null || datastoreCompilation == null)
-            {
-                return false;
-            }
-            return true;
+            return false;
         }
+        return true;
     }
 
     /**

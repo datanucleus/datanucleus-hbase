@@ -573,44 +573,42 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                     return new PrimaryDetails(mmd.getType(), familyName, qualifName);
                 }
+
+                boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
+                    embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
+
+                if (embedded)
+                {
+                    if (RelationType.isRelationSingleValued(relationType))
+                    {
+                        cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
+                        if (embMmd != null)
+                        {
+                            embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
+                        }
+                        else
+                        {
+                            embMmd = mmd;
+                        }
+                        embMmds.add(embMmd);
+                    }
+                    else if (RelationType.isRelationMultiValued(relationType))
+                    {
+                        throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
+                    }
+                }
                 else
                 {
-                    boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
-                        embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
+                    // Not embedded
+                    embMmds.clear();
 
-                    if (embedded)
+                    if (compileComponent == CompilationComponent.FILTER)
                     {
-                        if (RelationType.isRelationSingleValued(relationType))
-                        {
-                            cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
-                            if (embMmd != null)
-                            {
-                                embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
-                            }
-                            else
-                            {
-                                embMmd = mmd;
-                            }
-                            embMmds.add(embMmd);
-                        }
-                        else if (RelationType.isRelationMultiValued(relationType))
-                        {
-                            throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
-                        }
+                        filterComplete = false;
                     }
-                    else
-                    {
-                        // Not embedded
-                        embMmds.clear();
-
-                        if (compileComponent == CompilationComponent.FILTER)
-                        {
-                            filterComplete = false;
-                        }
-                        NucleusLogger.QUERY.debug("Query has reference to " + StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
+                    NucleusLogger.QUERY.debug("Query has reference to " + StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
                             " is not persisted into this document, so unexecutable in the datastore");
-                        return null;
-                    }
+                    return null;
                 }
             }
             firstTuple = false;

@@ -202,10 +202,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 throw new NucleusException(e.getMessage(), e);
             }
         }
-        else
-        {
-            return new String(bytes);
-        }
+
+        return new String(bytes);
     }
 
     public Object fetchObjectField(int fieldNumber)
@@ -279,11 +277,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             {
                 return value;
             }
-            else
-            {
-                // The stored value was the identity
-                return ec.findObject(value, true, true, null);
-            }
+
+            // The stored value was the identity
+            return ec.findObject(value, true, true, null);
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
@@ -505,41 +501,39 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         }
                         return memberValue;
                     }
-                    else
-                    {
-                        Column col = mapping.getColumn(0);
-                        String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                        String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                        Object value = readObjectField(col, familyName, qualifName, result, mmd);
-                        if (value == null)
-                        {
-                            return null;
-                        }
 
-                        byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-                        Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
-                        if (datastoreType == String.class)
-                        {
-                            returnValue = conv.toMemberType((String)value);
-                        }
-                        else if (datastoreType == Long.class)
-                        {
-                            returnValue = conv.toMemberType(Bytes.toLong(bytes));
-                        }
-                        else if (datastoreType == Integer.class)
-                        {
-                            returnValue = conv.toMemberType(Bytes.toInt(bytes));
-                        }
-                        else if (datastoreType == Double.class)
-                        {
-                            returnValue = conv.toMemberType(Bytes.toDouble(bytes));
-                        }
-                        else if (datastoreType == Boolean.class)
-                        {
-                            returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
-                        }
-                        // TODO Cater for other types
+                    Column col = mapping.getColumn(0);
+                    String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                    Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                    if (value == null)
+                    {
+                        return null;
                     }
+
+                    byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
+                    Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
+                    if (datastoreType == String.class)
+                    {
+                        returnValue = conv.toMemberType(value);
+                    }
+                    else if (datastoreType == Long.class)
+                    {
+                        returnValue = conv.toMemberType(Bytes.toLong(bytes));
+                    }
+                    else if (datastoreType == Integer.class)
+                    {
+                        returnValue = conv.toMemberType(Bytes.toInt(bytes));
+                    }
+                    else if (datastoreType == Double.class)
+                    {
+                        returnValue = conv.toMemberType(Bytes.toDouble(bytes));
+                    }
+                    else if (datastoreType == Boolean.class)
+                    {
+                        returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
+                    }
+                    // TODO Cater for other types
                 }
                 else
                 {
@@ -572,10 +566,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         {
                             return mmd.getType().getEnumConstants()[((Number)value).intValue()];
                         }
-                        else
-                        {
-                            return Enum.valueOf(mmd.getType(), (String)value);
-                        }
+
+                        return Enum.valueOf(mmd.getType(), (String)value);
                     }
                     else
                     {

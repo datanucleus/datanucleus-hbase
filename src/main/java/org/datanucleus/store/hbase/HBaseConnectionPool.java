@@ -60,19 +60,14 @@ public class HBaseConnectionPool
         {
             return null;
         }
-        else
-        {
-            HBaseManagedConnection managedConnection = ref.get();
 
-            if (managedConnection != null && !managedConnection.isDisposed())
-            {
-                return managedConnection;
-            }
-            else
-            {
-                return null;
-            }
+        HBaseManagedConnection managedConnection = ref.get();
+        if (managedConnection != null && !managedConnection.isDisposed())
+        {
+            return managedConnection;
         }
+
+        return null;
     }
 
     public void setTimeBetweenEvictionRunsMillis(int timeBetweenEvictionRunsMillis)
