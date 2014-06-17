@@ -435,18 +435,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             String familyName = HBaseUtils.getFamilyNameForColumn(col);
                             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                             Object colValue = null;
-                            if (!result.containsColumn(familyName.getBytes(), qualifName.getBytes()))
-                            {
-                                colValue = null;
-                            }
-                            else
+                            if (result.containsColumn(familyName.getBytes(), qualifName.getBytes()))
                             {
                                 byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-                                if (bytes == null)
-                                {
-                                    colValue = null;
-                                }
-                                else
+                                if (bytes != null)
                                 {
                                     isNull = false;
                                     if (colTypes[i] == String.class)
