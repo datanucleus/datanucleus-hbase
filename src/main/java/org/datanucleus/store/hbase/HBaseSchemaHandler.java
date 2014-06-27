@@ -144,7 +144,6 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             {
                 return;
             }
-            MetaDataExtensionParser ep = new MetaDataExtensionParser(cmd);
 
             boolean modified = false;
             if (!hTable.hasFamily(tableName.getBytes()))
@@ -208,6 +207,8 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                 }
             }
 
+            // Process any extensions
+            MetaDataExtensionParser ep = new MetaDataExtensionParser(cmd);
             if (!validateOnly && ep.hasExtensions())
             {
                 for (String familyName : familyNames)
