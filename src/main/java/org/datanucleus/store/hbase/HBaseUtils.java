@@ -114,7 +114,7 @@ public class HBaseUtils
      * @param cmd Metadata for the class
      * @param result The result
      * @param ec ExecutionContext
-     * @param tableName Name of the table
+     * @param table The table
      * @param storeMgr StoreManager
      * @return The version
      */
