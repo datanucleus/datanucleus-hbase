@@ -51,6 +51,7 @@ import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
+import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.Localiser;
@@ -375,7 +376,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     // Persist list<ids> into the column of this object
                     writeObjectField(familyName, qualifName, collIds);
                 }
-                op.wrapSCOField(fieldNumber, value, false, false, true);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
             }
             else if (mmd.hasMap())
             {
@@ -410,7 +411,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     // Persist map<keyids,valids> into the column of this object
                     writeObjectField(familyName, qualifName, mapIds);
                 }
-                op.wrapSCOField(fieldNumber, value, false, false, true);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
             }
             else if (mmd.hasArray())
             {
@@ -456,7 +457,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
 
                 writeObjectField(familyName, qualifName, value);
-                op.wrapSCOField(fieldNumber, value, false, false, true);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
                 return;
             }
 
@@ -560,7 +561,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             // Fallback to serialised
             writeObjectField(familyName, qualifName, value);
-            op.wrapSCOField(fieldNumber, value, false, false, true);
+            SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
         }
     }
 
