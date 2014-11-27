@@ -376,7 +376,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     // Persist list<ids> into the column of this object
                     writeObjectField(familyName, qualifName, collIds);
                 }
-                SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
             }
             else if (mmd.hasMap())
             {
@@ -411,7 +411,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     // Persist map<keyids,valids> into the column of this object
                     writeObjectField(familyName, qualifName, mapIds);
                 }
-                SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
             }
             else if (mmd.hasArray())
             {
@@ -457,7 +457,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
 
                 writeObjectField(familyName, qualifName, value);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
                 return;
             }
 
@@ -561,7 +561,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             // Fallback to serialised
             writeObjectField(familyName, qualifName, value);
-            SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
+            SCOUtils.wrapSCOField(op, fieldNumber, value, true);
         }
     }
 
