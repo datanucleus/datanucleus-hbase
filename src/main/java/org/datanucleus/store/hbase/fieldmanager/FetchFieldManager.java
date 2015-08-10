@@ -397,7 +397,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 if (mapping.getTypeConverter() != null)
                 {
                     // Persist using the provided converter
-                    TypeConverter conv = ec.getNucleusContext().getTypeManager().getTypeConverterForName(mmd.getTypeConverterName());
+                    TypeConverter conv = mapping.getTypeConverter();
                     if (mapping.getNumberOfColumns() > 1)
                     {
                         boolean isNull = true;
