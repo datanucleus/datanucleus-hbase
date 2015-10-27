@@ -25,6 +25,7 @@ import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Table;
 import org.datanucleus.exceptions.NucleusDataStoreException;
@@ -59,19 +60,19 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         return hconn;
     }
 
-    public Table getHTable(String tableName)
+    public Table getHTable(String tableNameString)
     {
-        Table table = tables.get(tableName);
+        Table table = tables.get(tableNameString);
         if (table == null)
         {
             try
             {
-                table = hconn.getTable(tableName);
-                tables.put(tableName, table);
+                table = hconn.getTable(TableName.valueOf(tableNameString));
+                tables.put(tableNameString, table);
             }
             catch (Exception e)
             {
-                throw new NucleusDataStoreException("Exception obtaining HTableInterface from HConnection for table=" + tableName, e);
+                throw new NucleusDataStoreException("Exception obtaining Table from Connection for table=" + tableNameString, e);
             }
         }
         return table;

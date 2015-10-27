@@ -193,7 +193,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (value == null)
         {
-            delete.deleteColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
+            delete.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
         }
         else
         {
@@ -203,7 +203,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
             else
             {
-                put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), value.getBytes());
+                put.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), value.getBytes());
             }
         }
     }
@@ -256,7 +256,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                             Column col = mapping.getColumn(0);
                             String colFamName = HBaseUtils.getFamilyNameForColumn(col);
                             String colQualName = HBaseUtils.getQualifierNameForColumn(col);
-                            delete.deleteColumn(colFamName.getBytes(), colQualName.getBytes());
+                            delete.addColumn(colFamName.getBytes(), colQualName.getBytes());
                         }
                         else if (Object.class.isAssignableFrom(embMmd.getType()))
                         {
@@ -305,7 +305,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
             if (value == null)
             {
-                delete.deleteColumn(familyName.getBytes(), qualifName.getBytes());
+                delete.addColumn(familyName.getBytes(), qualifName.getBytes());
                 return;
             }
 
@@ -330,7 +330,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
             if (value == null)
             {
-                delete.deleteColumn(familyName.getBytes(), qualifName.getBytes());
+                delete.addColumn(familyName.getBytes(), qualifName.getBytes());
                 return;
             }
 
@@ -444,7 +444,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 for (int i=0;i<mapping.getNumberOfColumns();i++)
                 {
                     Column col = mapping.getColumn(i);
-                    delete.deleteColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
+                    delete.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
                 }
                 return;
             }
@@ -474,14 +474,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         Object colValue = Array.get(datastoreValue, i);
                         byte[] valueColBytes = getPersistableBytesForObject(col, colValue);
                         // TODO What if valueColBytes is null, provide mechanism to serialise?
-                        put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
+                        put.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
                     }
                 }
                 else
                 {
                     Column col = mapping.getColumn(0);
                     byte[] valueColBytes = getPersistableBytesForObject(col, value);
-                    put.add(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
+                    put.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
                 }
                 return;
             }
@@ -539,11 +539,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 }
                 if (MetaDataUtils.persistColumnAsNumeric(colmd))
                 {
-                    put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
                 }
                 else
                 {
-                    put.add(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
                 }
                 return;
             }
@@ -555,7 +555,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             {
                 // Persist as a String
                 String strValue = (String)strConv.toDatastoreType(value);
-                put.add(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
+                put.addColumn(familyName.getBytes(), qualifName.getBytes(), strValue.getBytes());
                 return;
             }
 
@@ -572,7 +572,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeObject(value);
-            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -592,7 +592,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeBoolean(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -603,13 +603,13 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
     }
 
     private void storeByteInternal(String familyName, String columnName, byte value, boolean serialised)
     {
-        put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
+        put.addColumn(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
     }
 
     private void storeCharInternal(String familyName, String columnName, char value, boolean serialised)
@@ -622,7 +622,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeChar(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -633,7 +633,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), ("" + value).getBytes());
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), ("" + value).getBytes());
         }
     }
 
@@ -647,7 +647,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeDouble(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -658,7 +658,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
     }
 
@@ -672,7 +672,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeFloat(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -683,7 +683,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
     }
 
@@ -697,7 +697,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeInt(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -708,7 +708,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
     }
 
@@ -722,7 +722,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeLong(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -733,7 +733,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
     }
 
@@ -747,7 +747,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeShort(value);
                 oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                put.addColumn(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -758,7 +758,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+            put.addColumn(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
         }
     }
 

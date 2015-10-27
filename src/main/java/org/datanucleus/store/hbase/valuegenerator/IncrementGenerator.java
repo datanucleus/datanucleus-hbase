@@ -25,6 +25,7 @@ import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -94,6 +95,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
         {
             try
             {
+                TableName tableName = TableName.valueOf(tableNameString);
                 HBaseStoreManager hbaseMgr = (HBaseStoreManager) storeMgr;
                 Configuration config = hbaseMgr.getHbaseConfig();
                 HBaseAdmin admin = new HBaseAdmin(config);
@@ -107,7 +109,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                         }
 
                         NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableNameString + "'");
-                        HTableDescriptor ht = new HTableDescriptor(this.tableNameString);
+                        HTableDescriptor ht = new HTableDescriptor(tableName);
                         HColumnDescriptor hcd = new HColumnDescriptor(INCREMENT_COL_NAME);
                         hcd.setCompressionType(Compression.Algorithm.NONE);
                         hcd.setMaxVersions(1);
@@ -128,8 +130,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                     {
                         initialValue = Long.valueOf(properties.getProperty("key-initial-value"))-1;
                     }
-                    this.table.put(new Put(Bytes.toBytes(key)).add(Bytes.toBytes(INCREMENT_COL_NAME), 
-                        Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(initialValue)));
+                    this.table.put(new Put(Bytes.toBytes(key)).addColumn(Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(initialValue)));
                 }
             }
             catch (IOException ex)
@@ -164,8 +165,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
         List<Long> oids = new ArrayList<Long>();
         try
         {
-            number = table.incrementColumnValue(Bytes.toBytes(key), Bytes.toBytes(INCREMENT_COL_NAME), 
-                Bytes.toBytes(INCREMENT_COL_NAME), size);
+            number = table.incrementColumnValue(Bytes.toBytes(key), Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(INCREMENT_COL_NAME), size);
             long nextNumber = number - size + 1;
             for (int i=0;i<size;i++)
             {

@@ -151,7 +151,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     ObjectOutputStream oos = new ObjectOutputStream(bos);
                     oos.writeObject(key);
                     oos.flush();
-                    put.add(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
                     oos.close();
                     bos.close();
                 }
@@ -177,7 +177,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
                 String qualifName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
 
-                put.add(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
+                put.addColumn(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
             }
 
             if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
@@ -190,7 +190,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 {
                     String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
                     String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
-                    put.add(familyName.getBytes(), qualifName.getBytes(),
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(),
                         storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID).getBytes());
                 }
             }
@@ -224,11 +224,11 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
                     if (nextVersion instanceof Long)
                     {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
+                        put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
                     }
                     else if (nextVersion instanceof Integer)
                     {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Integer)nextVersion));
+                        put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Integer)nextVersion));
                     }
                     else
                     {
@@ -237,7 +237,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
                             ObjectOutputStream oos = new ObjectOutputStream(bos);
                             oos.writeObject(nextVersion);
-                            put.add(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
+                            put.addColumn(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
                             oos.close();
                             bos.close();
                         }
@@ -365,11 +365,11 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
                     if (nextVersion instanceof Long)
                     {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
+                        put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
                     }
                     else if (nextVersion instanceof Integer)
                     {
-                        put.add(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Integer)nextVersion));
+                        put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Integer)nextVersion));
                     }
                     else
                     {
@@ -378,7 +378,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
                             ObjectOutputStream oos = new ObjectOutputStream(bos);
                             oos.writeObject(nextVersion);
-                            put.add(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
+                            put.addColumn(familyName.getBytes(), qualifName.getBytes(), bos.toByteArray());
                             oos.close();
                             bos.close();
                         }

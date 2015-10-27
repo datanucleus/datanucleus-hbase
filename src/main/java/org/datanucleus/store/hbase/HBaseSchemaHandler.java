@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.datanucleus.ClassLoaderResolver;
@@ -101,7 +102,9 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             t = new CompleteClassTable(storeMgr, cmd, null);
         }
         final Table table = t;
-        final String tableName = table.getName();
+        final String tableNameString = table.getName();
+        final TableName tableName = TableName.valueOf(tableNameString);
+
         final Configuration config = storeMgr.getHbaseConfig();
         try
         {
@@ -121,17 +124,17 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                     HTableDescriptor hTable = null;
                     try
                     {
-                        hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
+                        hTable = hBaseAdmin.getTableDescriptor(tableNameString.getBytes());
                     }
                     catch (TableNotFoundException ex)
                     {
                         if (validateOnly)
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class", cmd.getFullClassName(), tableName));
+                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class", cmd.getFullClassName(), tableNameString));
                         }
                         else if (storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableName));
+                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableNameString));
                             hTable = new HTableDescriptor(tableName);
                             populateHTableColumnFamilyNames(hTable, table);
                             hBaseAdmin.createTable(hTable);
@@ -148,19 +151,19 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             }
 
             boolean modified = false;
-            if (!hTable.hasFamily(tableName.getBytes()))
+            if (!hTable.hasFamily(tableNameString.getBytes()))
             {
                 if (validateOnly)
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family", tableName, tableName));
+                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family", tableNameString, tableNameString));
                 }
                 else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
                 {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableName, tableName));
+                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableNameString, tableNameString));
 
                     // Not sure this is good. This creates a default family even if the family is actually defined in the @Column(name="family:fieldname") annotation. 
                     // i.e it is possible to get a family with no fields.
-                    HColumnDescriptor hColumn = new HColumnDescriptor(tableName);
+                    HColumnDescriptor hColumn = new HColumnDescriptor(tableNameString);
                     hTable.addFamily(hColumn);
                     modified = true;
                 }
@@ -170,7 +173,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             Set<String> familyNames = new HashSet<String>();
             for (Column col : cols)
             {
-                boolean changed = addColumnFamilyForColumn(col, hTable, tableName, familyNames, validateOnly);
+                boolean changed = addColumnFamilyForColumn(col, hTable, tableNameString, familyNames, validateOnly);
                 if (changed)
                 {
                     modified = true;
@@ -178,7 +181,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             }
             if (table.getDatastoreIdColumn() != null)
             {
-                boolean changed = addColumnFamilyForColumn(table.getDatastoreIdColumn(), hTable, tableName, familyNames, validateOnly);
+                boolean changed = addColumnFamilyForColumn(table.getDatastoreIdColumn(), hTable, tableNameString, familyNames, validateOnly);
                 if (changed)
                 {
                     modified = true;
@@ -186,7 +189,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             }
             if (table.getVersionColumn() != null)
             {
-                boolean changed = addColumnFamilyForColumn(table.getVersionColumn(), hTable, tableName, familyNames, validateOnly);
+                boolean changed = addColumnFamilyForColumn(table.getVersionColumn(), hTable, tableNameString, familyNames, validateOnly);
                 if (changed)
                 {
                     modified = true;
@@ -194,7 +197,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             }
             if (table.getDiscriminatorColumn() != null)
             {
-                boolean changed = addColumnFamilyForColumn(table.getDiscriminatorColumn(), hTable, tableName, familyNames, validateOnly);
+                boolean changed = addColumnFamilyForColumn(table.getDiscriminatorColumn(), hTable, tableNameString, familyNames, validateOnly);
                 if (changed)
                 {
                     modified = true;
@@ -202,7 +205,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             }
             if (table.getMultitenancyColumn() != null)
             {
-                boolean changed = addColumnFamilyForColumn(table.getMultitenancyColumn(), hTable, tableName, familyNames, validateOnly);
+                boolean changed = addColumnFamilyForColumn(table.getMultitenancyColumn(), hTable, tableNameString, familyNames, validateOnly);
                 if (changed)
                 {
                     modified = true;
@@ -225,9 +228,9 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                 {
                     public Object run() throws Exception
                     {
-                        hBaseAdmin.disableTable(hTable.getName());
-                        hBaseAdmin.modifyTable(hTable.getName(), hTable);
-                        hBaseAdmin.enableTable(hTable.getName());
+                        hBaseAdmin.disableTable(tableName);
+                        hBaseAdmin.modifyTable(tableName, hTable);
+                        hBaseAdmin.enableTable(tableName);
                         return null;
                     }
                 });
@@ -320,7 +323,9 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         {
             table = new CompleteClassTable(storeMgr, cmd, null);
         }
-        final String tableName = table.getName();
+        final String tableNameString = table.getName();
+        final TableName tableName = TableName.valueOf(tableNameString);
+
         final Configuration config = ((HBaseStoreManager)storeMgr).getHbaseConfig();
         try
         {
@@ -340,7 +345,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                     HTableDescriptor hTable;
                     try
                     {
-                        hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
+                        hTable = hBaseAdmin.getTableDescriptor(tableNameString.getBytes());
                     }
                     catch (TableNotFoundException ex)
                     {
@@ -357,8 +362,8 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                 public Object run() throws Exception
                 {
                     NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaDelete.Class", cmd.getFullClassName(), hTable.getNameAsString()));
-                    hBaseAdmin.disableTable(hTable.getName());
-                    hBaseAdmin.deleteTable(hTable.getName());
+                    hBaseAdmin.disableTable(tableName);
+                    hBaseAdmin.deleteTable(tableName);
                     return null;
                 }
             });
