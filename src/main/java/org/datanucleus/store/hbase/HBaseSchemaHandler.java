@@ -91,15 +91,16 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         }
 
         StoreData storeData = storeMgr.getStoreDataForClass(cmd.getFullClassName());
-        Table table = null;
+        Table t = null;
         if (storeData != null)
         {
-            table = storeData.getTable();
+            t = storeData.getTable();
         }
         else
         {
-            table = new CompleteClassTable(storeMgr, cmd, null);
+            t = new CompleteClassTable(storeMgr, cmd, null);
         }
+        final Table table = t;
         final String tableName = table.getName();
         final Configuration config = storeMgr.getHbaseConfig();
         try
@@ -132,6 +133,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                         {
                             NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableName));
                             hTable = new HTableDescriptor(tableName);
+                            populateHTableColumnFamilyNames(hTable, table);
                             hBaseAdmin.createTable(hTable);
                         }
                     }
@@ -235,6 +237,18 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         catch (PrivilegedActionException e)
         {
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+        }
+    }
+    
+    protected void populateHTableColumnFamilyNames(HTableDescriptor hTable, final Table table) {
+        Set<String> familyNames = new HashSet<>();
+        for (Column col : table.getColumns())
+        {
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            if (familyNames.add(familyName)) {
+                HColumnDescriptor familyNameCd = new HColumnDescriptor(familyName);
+                hTable.addFamily(familyNameCd);
+            }
         }
     }
 

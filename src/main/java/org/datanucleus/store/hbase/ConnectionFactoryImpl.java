@@ -17,6 +17,7 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -114,12 +115,16 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         {
             try
             {
-                HConnection hconn = HConnectionManager.createConnection(config);
+                HConnection hconn = HConnectionManager.createConnection(config); // TODO need to switch to Connection[Factory]! This old stuff is deprecated. 
                 managedConnection = new HBaseManagedConnection(hconn);
                 managedConnection.setIdleTimeoutMills(poolMinEvictableIdleTimeMillis);
                 connectionPool.registerConnection(managedConnection);
             }
             catch (ZooKeeperConnectionException e)
+            {
+                throw new NucleusDataStoreException("Exception thrown obtaining HConnection", e);
+            }
+            catch (IOException e)
             {
                 throw new NucleusDataStoreException("Exception thrown obtaining HConnection", e);
             }

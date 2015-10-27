@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusUserException;
@@ -109,7 +109,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                         NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableName + "'");
                         HTableDescriptor ht = new HTableDescriptor(this.tableName);
                         HColumnDescriptor hcd = new HColumnDescriptor(INCREMENT_COL_NAME);
-                        hcd.setCompressionType(Algorithm.NONE);
+                        hcd.setCompressionType(Compression.Algorithm.NONE);
                         hcd.setMaxVersions(1);
                         ht.addFamily(hcd);
                         admin.createTable(ht);
