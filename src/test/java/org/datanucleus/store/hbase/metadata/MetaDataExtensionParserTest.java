@@ -18,9 +18,11 @@ Contributors:
 package org.datanucleus.store.hbase.metadata;
 
 import junit.framework.TestCase;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.FileMetaData;
 import org.datanucleus.metadata.MetaData;
@@ -66,7 +68,7 @@ public class MetaDataExtensionParserTest extends TestCase
         assertEquals(5, cf.getMaxVersions());
         assertEquals(500, cf.getTimeToLive());
         assertEquals(Compression.Algorithm.LZO, cf.getCompression());
-//        assertEquals(StoreFile.BloomType.ROW, cf.getBloomFilterType()); // TODO replace by new stuff! org.apache.hadoop.hbase.regionserver.StoreFile does not exist anymore.
+        assertEquals(BloomType.ROW, cf.getBloomFilterType());
     }
 
     public void testInvalidFamilyName()

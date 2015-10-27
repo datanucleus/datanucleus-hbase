@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.ExtensionMetaData;
 import org.datanucleus.util.NucleusLogger;
@@ -35,7 +36,7 @@ public class MetaDataExtensionParser
 {
     public final static String BASE = "hbase.columnFamily.";
 
-//    private Map<String, StoreFile.BloomType> bloomFilterPerCf = new HashMap<String, StoreFile.BloomType>(); // TODO search for replacement of org.apache.hadoop.hbase.regionserver.StoreFile
+    private Map<String, BloomType> bloomFilterPerCf = new HashMap<String, BloomType>();
     private Map<String, Boolean> inMemoryPerCf = new HashMap<String, Boolean>();
     private Map<String, Boolean> keepDeletedCellsPerCf = new HashMap<String, Boolean>();
     private Map<String, Boolean> blockCacheEnabledPerCf = new HashMap<String, Boolean>();
@@ -90,10 +91,10 @@ public class MetaDataExtensionParser
                         case IN_MEMORY:
                             inMemoryPerCf.put(cf, toBoolean(value));
                             break;
-//                        case BLOOM_FILTER: // TODO replace by new stuff!
-//                            bloomFilterPerCf.put(cf, toBloomFilter(value));
-//                            extensionsFound = true;
-//                            break;
+                        case BLOOM_FILTER:
+                            bloomFilterPerCf.put(cf, toBloomFilter(value));
+                            extensionsFound = true;
+                            break;
                         case MAX_VERSIONS:
                             addMaxVersionsPerCf(cf, value);
                             break;
@@ -125,10 +126,10 @@ public class MetaDataExtensionParser
 
     public boolean applyExtensions(HTableDescriptor hTable, final String familyName)
     {
-//        if (NucleusLogger.METADATA.isDebugEnabled()) // TODO replace by new stuff!
-//        {
-//            NucleusLogger.METADATA.debug("Applying extensions: {BF = " + bloomFilterPerCf + "}");
-//        }
+        if (NucleusLogger.METADATA.isDebugEnabled())
+        {
+            NucleusLogger.METADATA.debug("Applying extensions: {BF = " + bloomFilterPerCf + "}");
+        }
         boolean modified = false;
         if (!extensionsFound || familyName == null)
         {
@@ -138,12 +139,12 @@ public class MetaDataExtensionParser
         if(hColumnDescriptor == null) {
             throw new IllegalArgumentException("No such family name corresponding HTable: " + familyName);
         }
-//        StoreFile.BloomType configuredBloomFilter = getBloomFilterForCf(familyName); // TODO replace by new stuff!
-//        if (configuredBloomFilter != hColumnDescriptor.getBloomFilterType())
-//        {
-//            hColumnDescriptor.setBloomFilterType(configuredBloomFilter);
-//            modified = true;
-//        }
+        BloomType configuredBloomFilter = getBloomFilterForCf(familyName);
+        if (configuredBloomFilter != hColumnDescriptor.getBloomFilterType())
+        {
+            hColumnDescriptor.setBloomFilterType(configuredBloomFilter);
+            modified = true;
+        }
         Boolean isInMemory = inMemoryPerCf.get(familyName);
         if (isInMemory != null && isInMemory != hColumnDescriptor.isInMemory())
         {
@@ -183,27 +184,27 @@ public class MetaDataExtensionParser
         return modified;
     }
 
-//    private StoreFile.BloomType getBloomFilterForCf(String familyName) // TODO replace by new stuff!
-//    {
-//        StoreFile.BloomType result = bloomFilterPerCf.get(familyName);
-//        return result != null ? result : StoreFile.BloomType.NONE;
-//    }
-//
-//    private StoreFile.BloomType toBloomFilter(String value) // TODO replace by new stuff!
-//    {
-//        if (value == null || value.length() == 0)
-//        {
-//            return StoreFile.BloomType.NONE;
-//        }
-//        try
-//        {
-//            return StoreFile.BloomType.valueOf(value);
-//        }
-//        catch (IllegalArgumentException e)
-//        {
-//            return StoreFile.BloomType.NONE;
-//        }
-//    }
+    private BloomType getBloomFilterForCf(String familyName)
+    {
+        BloomType result = bloomFilterPerCf.get(familyName);
+        return result != null ? result : BloomType.NONE;
+    }
+
+    private BloomType toBloomFilter(String value)
+    {
+        if (value == null || value.length() == 0)
+        {
+            return BloomType.NONE;
+        }
+        try
+        {
+            return BloomType.valueOf(value);
+        }
+        catch (IllegalArgumentException e)
+        {
+            return BloomType.NONE;
+        }
+    }
 
     private Compression.Algorithm toCompression(String value)
     {
