@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -177,7 +176,7 @@ class HBaseQueryUtils
                         scan.addColumn(familyName, qualifName);
                     }
 
-                    HTableInterface htable = mconn.getHTable(tableName);
+                    org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
                     ResultScanner scanner = htable.getScanner(scan);
                     if (ec.getStatistics() != null)
                     {

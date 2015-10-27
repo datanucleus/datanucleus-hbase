@@ -29,7 +29,6 @@ import java.util.Date;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -271,13 +270,13 @@ public class HBaseUtils
         return new Get(rowKey);
     }
 
-    public static Result getResultForObject(ObjectProvider op, HTableInterface table) throws IOException
+    public static Result getResultForObject(ObjectProvider op, org.apache.hadoop.hbase.client.Table table) throws IOException
     {
         Get get = getGetForObject(op);
         return table.get(get);
     }
 
-    public static boolean objectExistsInTable(ObjectProvider op, HTableInterface table) throws IOException
+    public static boolean objectExistsInTable(ObjectProvider op, org.apache.hadoop.hbase.client.Table table) throws IOException
     {
         Get get = getGetForObject(op);
         return table.exists(get);

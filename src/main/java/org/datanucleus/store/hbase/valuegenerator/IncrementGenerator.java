@@ -28,8 +28,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.exceptions.NucleusDataStoreException;
@@ -50,9 +50,9 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
     /** Key used in the Table to access the increment count */
     private String key;
 
-    private HTableInterface table;
+    private Table table;
 
-    private String tableName = null;
+    private String tableNameString = null;
 
     /**
      * Constructor. Will receive the following properties (as a minimum) through this constructor.
@@ -73,10 +73,10 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
     {
         super(name, props);
         this.key = properties.getProperty("field-name", name);
-        this.tableName = properties.getProperty("sequence-table-name");
-        if (this.tableName == null)
+        this.tableNameString = properties.getProperty("sequence-table-name");
+        if (this.tableNameString == null)
         {
-            this.tableName = "IncrementTable";
+            this.tableNameString = "IncrementTable";
         }
         if (properties.containsKey("key-cache-size"))
         {
@@ -99,15 +99,15 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                 HBaseAdmin admin = new HBaseAdmin(config);
                 try
                 {
-                    if (!admin.tableExists(this.tableName))
+                    if (!admin.tableExists(this.tableNameString))
                     {
                         if (!storeMgr.getSchemaHandler().isAutoCreateTables())
                         {
-                            throw new NucleusUserException(Localiser.msg("040011", tableName));
+                            throw new NucleusUserException(Localiser.msg("040011", tableNameString));
                         }
 
-                        NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableName + "'");
-                        HTableDescriptor ht = new HTableDescriptor(this.tableName);
+                        NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableNameString + "'");
+                        HTableDescriptor ht = new HTableDescriptor(this.tableNameString);
                         HColumnDescriptor hcd = new HColumnDescriptor(INCREMENT_COL_NAME);
                         hcd.setCompressionType(Compression.Algorithm.NONE);
                         hcd.setMaxVersions(1);
@@ -120,7 +120,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                     admin.close();
                 }
 
-                this.table = new HTable(config, this.tableName);
+                this.table = new HTable(config, this.tableNameString);
                 if (!this.table.exists(new Get(Bytes.toBytes(key))))
                 {
                     long initialValue = 0;

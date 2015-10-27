@@ -26,7 +26,7 @@ import java.util.Map;
 import javax.transaction.xa.XAResource;
 
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.store.connection.AbstractManagedConnection;
 import org.datanucleus.store.connection.ManagedConnectionResourceListener;
@@ -39,7 +39,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     private HConnection hconn;
 
     /** Cache of HTables used by this connection. */
-    private Map<String, HTableInterface> tables;
+    private Map<String, Table> tables;
 
     private int idleTimeoutMills = 30 * 1000; // 30 secs
 
@@ -50,18 +50,18 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     public HBaseManagedConnection(HConnection hconn)
     {
         this.hconn = hconn;
-        this.tables = new HashMap<String, HTableInterface>();
+        this.tables = new HashMap<String, Table>();
         disableExpirationTime();
     }
 
     public Object getConnection()
     {
-        throw new NucleusDataStoreException("Unsupported Exception #getConnection() for " + this.getClass().getName());
+        return hconn;
     }
 
-    public HTableInterface getHTable(String tableName)
+    public Table getHTable(String tableName)
     {
-        HTableInterface table = tables.get(tableName);
+        Table table = tables.get(tableName);
         if (table == null)
         {
             try
@@ -91,12 +91,12 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 
         try
         {
-            Map<String, HTableInterface> oldtables = tables;
-            tables = new HashMap<String, HTableInterface>();
+            Map<String, Table> oldtables = tables;
+            tables = new HashMap<String, Table>();
 
             try
             {
-                for (HTableInterface table : oldtables.values())
+                for (Table table : oldtables.values())
                 {
                     table.close();
                 }

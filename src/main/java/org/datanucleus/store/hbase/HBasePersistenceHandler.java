@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -107,7 +106,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         try
         {
             String tableName = table.getName();
-            HTableInterface htable = mconn.getHTable(tableName);
+            org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             boolean enforceUniquenessInApp = storeMgr.getBooleanProperty("datanucleus.hbase.enforceUniquenessInApplication", false);
             if (enforceUniquenessInApp)
             {
@@ -319,7 +318,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
 
             String tableName = table.getName();
-            HTableInterface htable = mconn.getHTable(tableName);
+            org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             if (cmd.isVersioned())
             {
                 // Optimistic checking of version
@@ -485,7 +484,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             try
             {
                 long startTime = System.currentTimeMillis();
-                HTableInterface htable = mconn.getHTable(tableName);
+                org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
                 Table table = ec.getStoreManager().getStoreDataForClass(opsForTable.iterator().next().getClassMetaData().getFullClassName()).getTable();
 
                 List<Delete> deletes = new ArrayList(opsForTable.size());
@@ -591,7 +590,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
             String tableName = table.getName();
-            HTableInterface htable = mconn.getHTable(tableName);
+            org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             if (cmd.isVersioned())
             {
                 // Optimistic checking of version
@@ -671,7 +670,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
             String tableName = table.getName();
-            HTableInterface htable = mconn.getHTable(tableName);
+            org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             Result result = HBaseUtils.getResultForObject(op, htable);
             if (result.getRow() == null)
             {
@@ -750,7 +749,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             final AbstractClassMetaData cmd = op.getClassMetaData();
             Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
             String tableName = table.getName();
-            HTableInterface htable = mconn.getHTable(tableName);
+            org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             if (!HBaseUtils.objectExistsInTable(op, htable))
             {
                 throw new NucleusObjectNotFoundException();
