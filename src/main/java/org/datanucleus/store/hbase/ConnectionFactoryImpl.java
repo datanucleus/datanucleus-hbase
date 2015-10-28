@@ -22,8 +22,8 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
@@ -102,8 +102,8 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     }
 
     /**
-     * Obtain a connection from the Factory. The connection will be enlisted within the transaction
-     * associated to the ExecutionContext
+     * Obtain a connection from the Factory.
+     * The connection will be enlisted within the transaction associated to the ExecutionContext
      * @param ec the pool that is bound the connection during its lifecycle (or null)
      * @param options Any options for creating the connection
      * @return the {@link org.datanucleus.store.connection.ManagedConnection}
@@ -115,8 +115,8 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         {
             try
             {
-                HConnection hconn = HConnectionManager.createConnection(config); // TODO need to switch to Connection[Factory]! This old stuff is deprecated. 
-                managedConnection = new HBaseManagedConnection(hconn);
+                Connection conn = ConnectionFactory.createConnection(config);
+                managedConnection = new HBaseManagedConnection(conn);
                 managedConnection.setIdleTimeoutMills(poolMinEvictableIdleTimeMillis);
                 connectionPool.registerConnection(managedConnection);
             }

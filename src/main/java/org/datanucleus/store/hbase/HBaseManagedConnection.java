@@ -26,7 +26,7 @@ import java.util.Map;
 import javax.transaction.xa.XAResource;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.store.connection.AbstractManagedConnection;
@@ -37,7 +37,7 @@ import org.datanucleus.store.connection.ManagedConnectionResourceListener;
  */
 public class HBaseManagedConnection extends AbstractManagedConnection
 {
-    private HConnection hconn;
+    private Connection conn;
 
     /** Cache of HTables used by this connection. */
     private Map<String, Table> tables;
@@ -48,16 +48,16 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 
     private boolean isDisposed = false;
 
-    public HBaseManagedConnection(HConnection hconn)
+    public HBaseManagedConnection(Connection conn)
     {
-        this.hconn = hconn;
+        this.conn = conn;
         this.tables = new HashMap<String, Table>();
         disableExpirationTime();
     }
 
     public Object getConnection()
     {
-        return hconn;
+        return conn;
     }
 
     public Table getHTable(String tableNameString)
@@ -67,7 +67,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         {
             try
             {
-                table = hconn.getTable(TableName.valueOf(tableNameString));
+                table = conn.getTable(TableName.valueOf(tableNameString));
                 tables.put(tableNameString, table);
             }
             catch (Exception e)
@@ -157,11 +157,11 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     public void dispose()
     {
         isDisposed = true;
-        if (!hconn.isClosed())
+        if (!conn.isClosed())
         {
             try
             {
-                hconn.close();
+                conn.close();
             }
             catch (IOException e)
             {
