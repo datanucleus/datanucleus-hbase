@@ -17,16 +17,18 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.metadata;
 
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.ExtensionMetaData;
 import org.datanucleus.util.NucleusLogger;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Parser to process metadata extensions for a class.
@@ -37,7 +39,7 @@ public class MetaDataExtensionParser
 
     private Map<String, BloomType> bloomFilterPerCf = new HashMap<String, BloomType>();
     private Map<String, Boolean> inMemoryPerCf = new HashMap<String, Boolean>();
-    private Map<String, Boolean> keepDeletedCellsPerCf = new HashMap<String, Boolean>();
+    private Map<String, KeepDeletedCells> keepDeletedCellsPerCf = new HashMap<String, KeepDeletedCells>();
     private Map<String, Boolean> blockCacheEnabledPerCf = new HashMap<String, Boolean>();
     private Map<String, Compression.Algorithm> compressionPerCf = new HashMap<String, Compression.Algorithm>();
     private Map<String, Integer> maxVersionsPerCf = new HashMap<String, Integer>();
@@ -98,7 +100,7 @@ public class MetaDataExtensionParser
                             addMaxVersionsPerCf(cf, value);
                             break;
                         case KEEP_DELETED_CELLS:
-                            keepDeletedCellsPerCf.put(cf, toBoolean(value));
+                            keepDeletedCellsPerCf.put(cf, toKeepDeletedCells(value));
                             break;
                         case COMPRESSION:
                             compressionPerCf.put(cf, toCompression(value));
@@ -168,12 +170,12 @@ public class MetaDataExtensionParser
             hColumnDescriptor.setCompressionType(compression);
             modified = true;
         }       
-//        Boolean keepDeletedCells = keepDeletedCellsPerCf.get(familyName);
-//        if (keepDeletedCells != null && keepDeletedCells != hColumnDescriptor.getKeepDeletedCells()) // TODO this is not a Boolean, anymore, but an enum!
-//        {
-//            hColumnDescriptor.setKeepDeletedCells(keepDeletedCells);
-//            modified = true;
-//        }
+        KeepDeletedCells keepDeletedCells = keepDeletedCellsPerCf.get(familyName);
+        if (keepDeletedCells != null && keepDeletedCells != hColumnDescriptor.getKeepDeletedCells())
+        {
+            hColumnDescriptor.setKeepDeletedCells(keepDeletedCells);
+            modified = true;
+        }
         Integer maxVersion = maxVersionsPerCf.get(familyName);
         if (maxVersion != null && maxVersion != hColumnDescriptor.getMaxVersions())
         {
@@ -202,6 +204,22 @@ public class MetaDataExtensionParser
         catch (IllegalArgumentException e)
         {
             return BloomType.NONE;
+        }
+    }
+    
+    private KeepDeletedCells toKeepDeletedCells(String value)
+    {
+        if (value == null || value.length() == 0)
+        {
+            return KeepDeletedCells.FALSE;
+        }
+        try
+        {
+            return KeepDeletedCells.valueOf(value.toUpperCase(Locale.UK)); // toUpperCase(...) for compatibility with previous boolean (lower-case 'true'/'false')
+        }
+        catch (IllegalArgumentException e)
+        {
+            return KeepDeletedCells.FALSE;
         }
     }
 

@@ -21,6 +21,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -64,7 +65,7 @@ public class MetaDataExtensionParserTest extends TestCase
         HColumnDescriptor cf = descriptor.getColumnFamilies()[0];
         assertTrue(cf.isInMemory());
         assertFalse(cf.isBlockCacheEnabled());
-//        assertTrue(cf.getKeepDeletedCells()); // TODO this is an enum, now - not a Boolean, anymore!
+        assertEquals(KeepDeletedCells.TRUE, cf.getKeepDeletedCells());
         assertEquals(5, cf.getMaxVersions());
         assertEquals(500, cf.getTimeToLive());
         assertEquals(Compression.Algorithm.LZO, cf.getCompression());
