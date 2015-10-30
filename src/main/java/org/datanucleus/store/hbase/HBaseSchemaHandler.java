@@ -151,23 +151,6 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             }
 
             boolean modified = false;
-            if (!hTable.hasFamily(tableNameString.getBytes()))
-            {
-                if (validateOnly)
-                {
-                    NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class.Family", tableNameString, tableNameString));
-                }
-                else if (storeMgr.getSchemaHandler().isAutoCreateColumns())
-                {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class.Family", tableNameString, tableNameString));
-
-                    // Not sure this is good. This creates a default family even if the family is actually defined in the @Column(name="family:fieldname") annotation. 
-                    // i.e it is possible to get a family with no fields.
-                    HColumnDescriptor hColumn = new HColumnDescriptor(tableNameString);
-                    hTable.addFamily(hColumn);
-                    modified = true;
-                }
-            }
 
             List<Column> cols = table.getColumns();
             Set<String> familyNames = new HashSet<String>();
