@@ -225,9 +225,10 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
     }
-    
-    protected void populateHTableColumnFamilyNames(HTableDescriptor hTable, final Table table) {
-        Set<String> familyNames = new HashSet<>();
+
+    protected void populateHTableColumnFamilyNames(HTableDescriptor hTable, final Table table)
+    {
+        Set<String> familyNames = new HashSet<String>();
         for (Column col : table.getColumns())
         {
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
