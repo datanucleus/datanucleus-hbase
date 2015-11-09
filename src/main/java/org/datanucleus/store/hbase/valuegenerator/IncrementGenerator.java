@@ -89,6 +89,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
         }
     }
 
+    @SuppressWarnings("deprecation")
     private synchronized void initialiseTable()
     {
         if (this.table == null)

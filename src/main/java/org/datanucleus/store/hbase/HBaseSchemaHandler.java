@@ -110,6 +110,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         {
             final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
+                @SuppressWarnings("deprecation")
                 public Object run() throws Exception
                 {
                     return new HBaseAdmin(config);
@@ -315,6 +316,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         {
             final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
+                @SuppressWarnings("deprecation")
                 public Object run() throws Exception
                 {
                     return new HBaseAdmin(config);

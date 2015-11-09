@@ -78,6 +78,7 @@ public class MetaDataExtensionParserTest extends TestCase
         acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.BLOOM_FILTER.name(), "ROW");
         MetaDataExtensionParser ep = new MetaDataExtensionParser(acmd);
 
+        @SuppressWarnings("deprecation")
         HTableDescriptor descriptor = new HTableDescriptor();
         HColumnDescriptor cf = new HColumnDescriptor("invalid value");
         descriptor.addFamily(cf);
@@ -102,6 +103,7 @@ public class MetaDataExtensionParserTest extends TestCase
 
     private HTableDescriptor getTable()
     {
+        @SuppressWarnings("deprecation")
         HTableDescriptor descriptor = new HTableDescriptor();
         HColumnDescriptor cf = new HColumnDescriptor(TEST_FAMILY);
         descriptor.addFamily(cf);
