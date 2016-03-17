@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -170,40 +171,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
     public String fetchStringField(int fieldNumber)
     {
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         Column col = getColumnMapping(fieldNumber).getColumn(0);
         String familyName = HBaseUtils.getFamilyNameForColumn(col);
         String qualifName = HBaseUtils.getQualifierNameForColumn(col);
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-        if (bytes == null)
-        {
-            // TODO Get hold of default from column
-            return null;
-        }
-
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            // Early version of this plugin serialised values
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                String value = (String) ois.readObject();
-                ois.close();
-                bis.close();
-                return value;
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-            catch (ClassNotFoundException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-
-        return new String(bytes);
+        return fetchStringInternal(bytes, mmd.isSerialized(), null);
     }
 
     public Object fetchObjectField(int fieldNumber)
@@ -262,6 +235,16 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         int fieldNumber = mmd.getAbsoluteFieldNumber();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
+        boolean optional = false;
+        if (Optional.class.isAssignableFrom(mmd.getType()))
+        {
+            if (relationType != RelationType.NONE)
+            {
+                relationType = RelationType.ONE_TO_ONE_UNI;
+            }
+            optional = true;
+        }
+
         if (RelationType.isRelationSingleValued(relationType))
         {
             Column col = mapping.getColumn(0);
@@ -270,16 +253,17 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             Object value = readObjectField(col, familyName, qualifName, result, mmd);
             if (value == null)
             {
-                return null;
+                return optional ? Optional.empty() : null;
             }
 
             if (mmd.isSerialized())
             {
-                return value;
+                return optional ? Optional.of(value) : value;
             }
 
             // The stored value was the identity
-            return ec.findObject(value, true, true, null);
+            Object pc = ec.findObject(value, true, true, null);
+            return optional ? Optional.of(pc) : pc;
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
@@ -387,7 +371,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 Object value = readObjectField(col, familyName, qualifName, result, mmd);
                 if (value == null)
                 {
-                    return null;
+                    return optional ? Optional.empty() : null;
                 }
 
                 returnValue = value;
@@ -533,33 +517,39 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     String familyName = HBaseUtils.getFamilyNameForColumn(col);
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                     Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                    Class type = (optional ? clr.classForName(mmd.getCollection().getElementType()) : mmd.getType());
                     if (value == null)
                     {
-                        return null;
+                        return optional ? Optional.empty() : null;
                     }
 
                     returnValue = value;
 
-                    if (Boolean.class.isAssignableFrom(mmd.getType()) ||
-                        Byte.class.isAssignableFrom(mmd.getType()) ||
-                        Integer.class.isAssignableFrom(mmd.getType()) ||
-                        Double.class.isAssignableFrom(mmd.getType()) ||
-                        Float.class.isAssignableFrom(mmd.getType()) ||
-                        Long.class.isAssignableFrom(mmd.getType()) ||
-                        Character.class.isAssignableFrom(mmd.getType()) ||
-                        Short.class.isAssignableFrom(mmd.getType()))
+                    if (Boolean.class.isAssignableFrom(type) ||
+                        Byte.class.isAssignableFrom(type) ||
+                        Integer.class.isAssignableFrom(type) ||
+                        Double.class.isAssignableFrom(type) ||
+                        Float.class.isAssignableFrom(type) ||
+                        Long.class.isAssignableFrom(type) ||
+                        Character.class.isAssignableFrom(type) ||
+                        Short.class.isAssignableFrom(type))
                     {
-                        return value;
+                        return optional ? Optional.of(value) : value;
                     }
-                    else if (Enum.class.isAssignableFrom(mmd.getType()))
+                    else if (String.class.isAssignableFrom(type))
+                    {
+                        return optional ? Optional.of(value) : value;
+                    }
+                    else if (Enum.class.isAssignableFrom(type))
                     {
                         ColumnMetaData colmd = col.getColumnMetaData();
                         if (MetaDataUtils.persistColumnAsNumeric(colmd))
                         {
-                            return mmd.getType().getEnumConstants()[((Number)value).intValue()];
+                            return type.getEnumConstants()[((Number)value).intValue()];
                         }
 
-                        return Enum.valueOf(mmd.getType(), (String)value);
+                        Object myEnum = Enum.valueOf(type, (String)value);
+                        return optional ? Optional.of(myEnum) : myEnum;
                     }
                     else
                     {
@@ -575,11 +565,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     }
                 }
             }
-            if (op != null)
-            {
-                return SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true);
-            }
-            return returnValue;
+            returnValue = optional ? Optional.of(returnValue) : returnValue;
+            return (op!=null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
         }
     }
 
@@ -592,39 +579,44 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
 
         // TODO Get default value for column from Table/Column structure
-        if (mmd.getType() == Boolean.class)
+        Class type = (Optional.class.isAssignableFrom(mmd.getType()) ? ec.getClassLoaderResolver().classForName(mmd.getCollection().getElementType()) : mmd.getType());
+        if (type == Boolean.class)
         {
             return fetchBooleanInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Byte.class)
+        else if (type == Byte.class)
         {
             return fetchByteInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Character.class)
+        else if (type == Character.class)
         {
             return fetchCharInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Double.class)
+        else if (type == Double.class)
         {
             return fetchDoubleInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Float.class)
+        else if (type == Float.class)
         {
             return fetchFloatInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Integer.class)
+        else if (type == Integer.class)
         {
             return fetchIntInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Long.class)
+        else if (type == Long.class)
         {
             return fetchLongInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (mmd.getType() == Short.class)
+        else if (type == Short.class)
         {
             return fetchShortInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
-        else if (Enum.class.isAssignableFrom(mmd.getType()))
+        else if (type == String.class)
+        {
+            return fetchStringInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
+        }
+        else if (Enum.class.isAssignableFrom(type))
         {
             ColumnMetaData colmd = null;
             if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
@@ -930,5 +922,41 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             value = Bytes.toShort(bytes);
         }
         return value;
+    }
+
+    private String fetchStringInternal(byte[] bytes, boolean serialised, String defaultValue)
+    {
+        if (bytes == null)
+        {
+            // Handle missing field
+            if (defaultValue != null)
+            {
+                return defaultValue;
+            }
+        }
+
+        if (serialised)
+        {
+            // Early version of this plugin serialised values
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                String value = (String) ois.readObject();
+                ois.close();
+                bis.close();
+                return value;
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+            catch (ClassNotFoundException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+
+        return new String(bytes);
     }
 }

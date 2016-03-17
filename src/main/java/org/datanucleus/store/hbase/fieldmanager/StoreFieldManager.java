@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -283,6 +284,24 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+
+        if (value instanceof Optional)
+        {
+            if (relationType != RelationType.NONE)
+            {
+                relationType = RelationType.ONE_TO_ONE_UNI;
+            }
+
+            Optional opt = (Optional)value;
+            if (opt.isPresent())
+            {
+                value = opt.get();
+            }
+            else
+            {
+                value = null;
+            }
+        }
 
         if (RelationType.isRelationSingleValued(relationType))
         {
@@ -545,6 +564,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 {
                     put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
                 }
+                return;
+            }
+            else if (String.class.isAssignableFrom(value.getClass()))
+            {
+                put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((String)value).getBytes());
                 return;
             }
 
