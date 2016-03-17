@@ -76,7 +76,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
     }
 
     /**
-     * Create a schema in HBase. Do not make this method public, since it uses privileged actions.
+     * Create a schema in HBase.
      * @param storeMgr HBase StoreManager
      * @param cmd Metadata for the class
      * @param validateOnly Whether to only validate for existence and flag missing schema in the log
