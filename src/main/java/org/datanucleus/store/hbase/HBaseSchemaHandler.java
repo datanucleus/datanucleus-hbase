@@ -17,21 +17,19 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase;
 
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -105,125 +103,111 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         final String tableNameString = table.getName();
         final TableName tableName = TableName.valueOf(tableNameString);
 
-        final Configuration config = storeMgr.getHbaseConfig();
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(-1);
         try
         {
-            final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
+            Connection conn = (Connection) mconn.getConnection();
+            try
             {
-                @SuppressWarnings("deprecation")
-                public Object run() throws Exception
-                {
-                    return new HBaseAdmin(config);
-                }
-            });
+                Admin hBaseAdmin = conn.getAdmin();
 
-            // Find table descriptor, if not existing, create it
-            final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
+                // Find table descriptor, if not existing, create it
+                HTableDescriptor hTable = null;
+                try
                 {
-                    HTableDescriptor hTable = null;
-                    try
+                    hTable = hBaseAdmin.getTableDescriptor(tableName);
+                }
+                catch (TableNotFoundException tnfe)
+                {
+                    if (validateOnly)
                     {
-                        hTable = hBaseAdmin.getTableDescriptor(tableNameString.getBytes());
+                        NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class", cmd.getFullClassName(), tableNameString));
                     }
-                    catch (TableNotFoundException ex)
+                    else if (storeMgr.getSchemaHandler().isAutoCreateTables())
                     {
-                        if (validateOnly)
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.info(Localiser.msg("HBase.SchemaValidate.Class", cmd.getFullClassName(), tableNameString));
-                        }
-                        else if (storeMgr.getSchemaHandler().isAutoCreateTables())
-                        {
-                            NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableNameString));
-                            hTable = new HTableDescriptor(tableName);
-                            populateHTableColumnFamilyNames(hTable, table);
-                            hBaseAdmin.createTable(hTable);
-                        }
+                        NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableNameString));
+                        hTable = new HTableDescriptor(tableName);
+                        populateHTableColumnFamilyNames(hTable, table);
+                        hBaseAdmin.createTable(hTable);
                     }
-                    return hTable;
                 }
-            });
 
-            // No such table & no auto-create -> exit
-            if (hTable == null)
-            {
-                return;
-            }
+                // No such table & no auto-create -> exit
+                if (hTable == null)
+                {
+                    return;
+                }
 
-            boolean modified = false;
+                boolean modified = false;
 
-            List<Column> cols = table.getColumns();
-            Set<String> familyNames = new HashSet<String>();
-            for (Column col : cols)
-            {
-                boolean changed = addColumnFamilyForColumn(col, hTable, tableNameString, familyNames, validateOnly);
-                if (changed)
+                List<Column> cols = table.getColumns();
+                Set<String> familyNames = new HashSet<String>();
+                for (Column col : cols)
                 {
-                    modified = true;
-                }
-            }
-            if (table.getDatastoreIdColumn() != null)
-            {
-                boolean changed = addColumnFamilyForColumn(table.getDatastoreIdColumn(), hTable, tableNameString, familyNames, validateOnly);
-                if (changed)
-                {
-                    modified = true;
-                }
-            }
-            if (table.getVersionColumn() != null)
-            {
-                boolean changed = addColumnFamilyForColumn(table.getVersionColumn(), hTable, tableNameString, familyNames, validateOnly);
-                if (changed)
-                {
-                    modified = true;
-                }
-            }
-            if (table.getDiscriminatorColumn() != null)
-            {
-                boolean changed = addColumnFamilyForColumn(table.getDiscriminatorColumn(), hTable, tableNameString, familyNames, validateOnly);
-                if (changed)
-                {
-                    modified = true;
-                }
-            }
-            if (table.getMultitenancyColumn() != null)
-            {
-                boolean changed = addColumnFamilyForColumn(table.getMultitenancyColumn(), hTable, tableNameString, familyNames, validateOnly);
-                if (changed)
-                {
-                    modified = true;
-                }
-            }
-
-            // Process any extensions
-            MetaDataExtensionParser ep = new MetaDataExtensionParser(cmd);
-            if (!validateOnly && ep.hasExtensions())
-            {
-                for (String familyName : familyNames)
-                {
-                    modified |= ep.applyExtensions(hTable, familyName);
-                }
-            }
-
-            if (modified)
-            {
-                AccessController.doPrivileged(new PrivilegedExceptionAction()
-                {
-                    public Object run() throws Exception
+                    boolean changed = addColumnFamilyForColumn(col, hTable, tableNameString, familyNames, validateOnly);
+                    if (changed)
                     {
-                        hBaseAdmin.disableTable(tableName);
-                        hBaseAdmin.modifyTable(tableName, hTable);
-                        hBaseAdmin.enableTable(tableName);
-                        return null;
+                        modified = true;
                     }
-                });
-            }
+                }
+                if (table.getDatastoreIdColumn() != null)
+                {
+                    boolean changed = addColumnFamilyForColumn(table.getDatastoreIdColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    if (changed)
+                    {
+                        modified = true;
+                    }
+                }
+                if (table.getVersionColumn() != null)
+                {
+                    boolean changed = addColumnFamilyForColumn(table.getVersionColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    if (changed)
+                    {
+                        modified = true;
+                    }
+                }
+                if (table.getDiscriminatorColumn() != null)
+                {
+                    boolean changed = addColumnFamilyForColumn(table.getDiscriminatorColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    if (changed)
+                    {
+                        modified = true;
+                    }
+                }
+                if (table.getMultitenancyColumn() != null)
+                {
+                    boolean changed = addColumnFamilyForColumn(table.getMultitenancyColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    if (changed)
+                    {
+                        modified = true;
+                    }
+                }
 
+                // Process any extensions
+                MetaDataExtensionParser ep = new MetaDataExtensionParser(cmd);
+                if (!validateOnly && ep.hasExtensions())
+                {
+                    for (String familyName : familyNames)
+                    {
+                        modified |= ep.applyExtensions(hTable, familyName);
+                    }
+                }
+
+                if (modified)
+                {
+                    hBaseAdmin.disableTable(tableName);
+                    hBaseAdmin.modifyTable(tableName, hTable);
+                    hBaseAdmin.enableTable(tableName);
+                }
+            }
+            catch (IOException e)
+            {
+                throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+            }
         }
-        catch (PrivilegedActionException e)
+        finally
         {
-            throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+            mconn.release();
         }
     }
 
@@ -311,52 +295,39 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         final String tableNameString = table.getName();
         final TableName tableName = TableName.valueOf(tableNameString);
 
-        final Configuration config = ((HBaseStoreManager)storeMgr).getHbaseConfig();
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(-1);
         try
         {
-            final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
+            Connection conn = (Connection) mconn.getConnection();
+            try
             {
-                @SuppressWarnings("deprecation")
-                public Object run() throws Exception
-                {
-                    return new HBaseAdmin(config);
-                }
-            });
+                Admin hBaseAdmin = conn.getAdmin();
 
-            // Find table descriptor, if not existing, create it
-            final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
-            {
-                public Object run() throws Exception
+                // Find table descriptor, if not existing, create it
+                HTableDescriptor hTable = null;
+                try
                 {
-                    HTableDescriptor hTable;
-                    try
-                    {
-                        hTable = hBaseAdmin.getTableDescriptor(tableNameString.getBytes());
-                    }
-                    catch (TableNotFoundException ex)
-                    {
-                        // TODO Why create it if we are trying to delete it????
-                        hTable = new HTableDescriptor(tableName);
-                        hBaseAdmin.createTable(hTable);
-                    }
-                    return hTable;
+                    hTable = hBaseAdmin.getTableDescriptor(tableName);
                 }
-            });
+                catch (TableNotFoundException tnfe)
+                {
+                    // TODO Why create it if we are trying to delete it????
+                    hTable = new HTableDescriptor(tableName);
+                    hBaseAdmin.createTable(hTable);
+                }
 
-            AccessController.doPrivileged(new PrivilegedExceptionAction()
+                NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaDelete.Class", cmd.getFullClassName(), hTable.getNameAsString()));
+                hBaseAdmin.disableTable(tableName);
+                hBaseAdmin.deleteTable(tableName);
+            }
+            catch (IOException e)
             {
-                public Object run() throws Exception
-                {
-                    NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaDelete.Class", cmd.getFullClassName(), hTable.getNameAsString()));
-                    hBaseAdmin.disableTable(tableName);
-                    hBaseAdmin.deleteTable(tableName);
-                    return null;
-                }
-            });
+                throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+            }
         }
-        catch (PrivilegedActionException e)
+        finally
         {
-            throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+            mconn.release();
         }
     }
 
