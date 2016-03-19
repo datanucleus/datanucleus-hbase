@@ -933,6 +933,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             {
                 return defaultValue;
             }
+            return null;
         }
 
         if (serialised)
