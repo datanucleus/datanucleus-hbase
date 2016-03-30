@@ -313,17 +313,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
             return;
         }
-        else if (mmd.isSerialized())
-        {
-            // Persist member as serialised
-            Column col = mapping.getColumn(0);
-            String familyName = HBaseUtils.getFamilyNameForColumn(col);
-            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-
-            writeObjectField(familyName, qualifName, value);
-            SCOUtils.wrapSCOField(op, fieldNumber, value, true);
-            return;
-        }
 
         if (RelationType.isRelationSingleValued(relationType))
         {
@@ -340,6 +329,33 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 }
             }
 
+            if (mmd.isSerialized())
+            {
+                // Assign an ObjectProvider to the serialised object if none present
+                ObjectProvider pcOP = ec.findObjectProvider(value);
+                if (pcOP == null || ec.getApiAdapter().getExecutionContext(value) == null)
+                {
+                    pcOP = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
+                }
+
+                if (pcOP != null)
+                {
+                    pcOP.setStoringPC();
+                }
+
+                // Persist member as serialised
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                writeObjectField(familyName, qualifName, value);
+
+                if (pcOP != null)
+                {
+                    pcOP.unsetStoringPC();
+                }
+                return;
+            }
+
             // PC object, so make sure it is persisted
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
@@ -352,6 +368,18 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
+            if (mmd.isSerialized())
+            {
+                // Persist member as serialised
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+
+                writeObjectField(familyName, qualifName, value);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                return;
+            }
+
             // Collection/Map/Array
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
@@ -455,6 +483,18 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else
         {
+            if (mmd.isSerialized())
+            {
+                // Persist member as serialised
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+
+                writeObjectField(familyName, qualifName, value);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                return;
+            }
+
             if (mapping.getTypeConverter() != null)
             {
                 // Persist using the provided converter

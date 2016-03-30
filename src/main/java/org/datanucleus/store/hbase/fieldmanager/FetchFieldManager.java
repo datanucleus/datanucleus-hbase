@@ -245,16 +245,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             optional = true;
         }
 
-        if (mmd.isSerialized())
-        {
-            Column col = mapping.getColumn(0);
-            String familyName = HBaseUtils.getFamilyNameForColumn(col);
-            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-            Object value = readObjectField(col, familyName, qualifName, result, mmd);
-            Object returnValue = (value == null) ? (optional ? Optional.empty() : null) : (optional ? Optional.of(value) : value);
-            return (op != null && returnValue != null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
-        }
-
         if (RelationType.isRelationSingleValued(relationType))
         {
             Column col = mapping.getColumn(0);
@@ -266,12 +256,33 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 return optional ? Optional.empty() : null;
             }
 
+            if (mmd.isSerialized())
+            {
+                // Make sure it has an ObjectProvider
+                ObjectProvider pcOP = ec.findObjectProvider(value);
+                if (pcOP == null || ec.getApiAdapter().getExecutionContext(value) == null)
+                {
+                    ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
+                }
+                return value;
+            }
+
             // The stored value was the identity
             Object pc = ec.findObject(value, true, true, null);
             return optional ? Optional.of(pc) : pc;
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
+            if (mmd.isSerialized())
+            {
+                Column col = mapping.getColumn(0);
+                String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+                Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                Object returnValue = (value == null) ? (optional ? Optional.empty() : null) : (optional ? Optional.of(value) : value);
+                return (op != null && returnValue != null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
+            }
+
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
