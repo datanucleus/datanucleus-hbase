@@ -303,6 +303,28 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
         }
 
+        if (value == null)
+        {
+            // Null will omit the column(s)
+            for (int i=0;i<mapping.getNumberOfColumns();i++)
+            {
+                Column col = mapping.getColumn(i);
+                delete.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
+            }
+            return;
+        }
+        else if (mmd.isSerialized())
+        {
+            // Persist member as serialised
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+
+            writeObjectField(familyName, qualifName, value);
+            SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+            return;
+        }
+
         if (RelationType.isRelationSingleValued(relationType))
         {
             if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
@@ -322,24 +344,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-            if (value == null)
-            {
-                delete.addColumn(familyName.getBytes(), qualifName.getBytes());
-                return;
-            }
 
+            // Persist identity in the column of this object
             Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
-            if (mmd.isSerialized())
-            {
-                // Persist as serialised into the column of this object
-                writeObjectField(familyName, qualifName, value);
-            }
-            else
-            {
-                // Persist identity in the column of this object
-                Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
-                writeObjectField(familyName, qualifName, valueId);
-            }
+            Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
+            writeObjectField(familyName, qualifName, valueId);
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
@@ -347,11 +356,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-            if (value == null)
-            {
-                delete.addColumn(familyName.getBytes(), qualifName.getBytes());
-                return;
-            }
 
             if (mmd.hasCollection())
             {
@@ -385,16 +389,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     collIds.add(elementID);
                 }
 
-                if (mmd.isSerialized())
+                if (mmd.getCollection().isSerializedElement())
                 {
-                    // Persist as serialised into the column of this object
-                    writeObjectField(familyName, qualifName, value);
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized collection elements (field=" + mmd.getFullFieldName() + ")");
                 }
-                else
-                {
-                    // Persist list<ids> into the column of this object
-                    writeObjectField(familyName, qualifName, collIds);
-                }
+
+                // Persist list<ids> into the column of this object
+                writeObjectField(familyName, qualifName, collIds);
                 SCOUtils.wrapSCOField(op, fieldNumber, value, true);
             }
             else if (mmd.hasMap())
@@ -420,16 +422,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     mapIds.put(mapKey, mapValue);
                 }
 
-                if (mmd.isSerialized())
+                if (mmd.getMap().isSerializedKey() || mmd.getMap().isSerializedValue())
                 {
-                    // Persist as serialised into the column of this object
-                    writeObjectField(familyName, qualifName, value);
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized map keys/values (field=" + mmd.getFullFieldName() + ")");
                 }
-                else
-                {
-                    // Persist map<keyids,valids> into the column of this object
-                    writeObjectField(familyName, qualifName, mapIds);
-                }
+
+                // Persist map<keyids,valids> into the column of this object
+                writeObjectField(familyName, qualifName, mapIds);
                 SCOUtils.wrapSCOField(op, fieldNumber, value, true);
             }
             else if (mmd.hasArray())
@@ -443,43 +443,18 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     arrIds.add(elementID);
                 }
 
-                if (mmd.isSerialized())
+                if (mmd.getArray().isSerializedElement())
                 {
-                    // Persist as serialised into the column of this object
-                    writeObjectField(familyName, qualifName, value);
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized array elements (field=" + mmd.getFullFieldName() + ")");
                 }
-                else
-                {
-                    // Persist list of array element ids into the column of this object
-                    writeObjectField(familyName, qualifName, arrIds);
-                }
+
+                // Persist list of array element ids into the column of this object
+                writeObjectField(familyName, qualifName, arrIds);
             }
         }
         else
         {
-            // Non-relational field
-            if (value == null)
-            {
-                for (int i=0;i<mapping.getNumberOfColumns();i++)
-                {
-                    Column col = mapping.getColumn(i);
-                    delete.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes());
-                }
-                return;
-            }
-
-            if (mmd.isSerialized())
-            {
-                // Persist serialised
-                Column col = mapping.getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-
-                writeObjectField(familyName, qualifName, value);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
-                return;
-            }
-
             if (mapping.getTypeConverter() != null)
             {
                 // Persist using the provided converter

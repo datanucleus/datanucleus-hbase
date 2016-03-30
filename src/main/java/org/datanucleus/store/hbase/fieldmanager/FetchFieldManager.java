@@ -245,6 +245,16 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             optional = true;
         }
 
+        if (mmd.isSerialized())
+        {
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+            Object value = readObjectField(col, familyName, qualifName, result, mmd);
+            Object returnValue = (value == null) ? (optional ? Optional.empty() : null) : (optional ? Optional.of(value) : value);
+            return (op != null && returnValue != null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
+        }
+
         if (RelationType.isRelationSingleValued(relationType))
         {
             Column col = mapping.getColumn(0);
@@ -254,11 +264,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             if (value == null)
             {
                 return optional ? Optional.empty() : null;
-            }
-
-            if (mmd.isSerialized())
-            {
-                return optional ? Optional.of(value) : value;
             }
 
             // The stored value was the identity
@@ -276,11 +281,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 return null;
             }
 
-            if (mmd.isSerialized())
-            {
-                return value;
-            }
-
             if (mmd.hasCollection())
             {
                 Collection<Object> coll;
@@ -292,6 +292,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 catch (Exception e)
                 {
                     throw new NucleusDataStoreException(e.getMessage(), e);
+                }
+
+                if (mmd.getCollection().isSerializedElement())
+                {
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized collection elements (field=" + mmd.getFullFieldName() + ")");
                 }
 
                 Collection collIds = (Collection)value;
@@ -318,6 +324,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 catch (Exception e)
                 {
                     throw new NucleusDataStoreException(e.getMessage(), e);
+                }
+
+                if (mmd.getMap().isSerializedKey() || mmd.getMap().isSerializedValue())
+                {
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized map keys/values (field=" + mmd.getFullFieldName() + ")");
                 }
 
                 Map mapIds = (Map)value;
@@ -347,6 +359,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
             else if (mmd.hasArray())
             {
+                if (mmd.getArray().isSerializedElement())
+                {
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized array elements (field=" + mmd.getFullFieldName() + ")");
+                }
+
                 Collection arrIds = (Collection)value;
                 Object array = Array.newInstance(mmd.getType().getComponentType(), arrIds.size());
                 Iterator idIter = arrIds.iterator();
