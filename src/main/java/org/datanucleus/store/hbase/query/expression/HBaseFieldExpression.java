@@ -17,6 +17,11 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.query.expression;
 
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.MetaDataUtils;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
+
 /**
  * Expression for a field in a HBase datastore.
  */
@@ -25,16 +30,43 @@ public class HBaseFieldExpression extends HBaseExpression
     final Class type;
     final String familyName;
     final String columnName;
+    MemberColumnMapping mapping;
+    AbstractMemberMetaData mmd;
 
-    public HBaseFieldExpression(Class type, String familyName, String columnName)
+    public HBaseFieldExpression(Class type, String familyName, String columnName, AbstractMemberMetaData mmd, MemberColumnMapping mapping)
     {
         this.type = type;
         this.familyName = familyName;
         this.columnName = columnName;
+        this.mmd = mmd;
+        this.mapping = mapping;
+    }
+
+    public MemberColumnMapping getMemberColumnMapping()
+    {
+        return mapping;
+    }
+
+    public AbstractMemberMetaData getMemberMetaData()
+    {
+        return mmd;
     }
 
     public Class getType()
     {
+        if (type.isEnum())
+        {
+            ColumnMetaData colmd = null;
+            if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
+            {
+                colmd = mmd.getColumnMetaData()[0];
+            }
+            if (MetaDataUtils.persistColumnAsNumeric(colmd))
+            {
+                return int.class;
+            }
+            return String.class;
+        }
         return type;
     }
 

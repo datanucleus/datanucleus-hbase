@@ -46,6 +46,7 @@ import org.datanucleus.store.hbase.query.expression.HBaseFieldExpression;
 import org.datanucleus.store.hbase.query.expression.HBaseLiteral;
 import org.datanucleus.store.query.Query;
 import org.datanucleus.store.schema.table.Column;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
@@ -203,8 +204,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
             HBaseLiteral litExpr = (HBaseLiteral)left;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_EQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_EQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -213,8 +213,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
             HBaseLiteral litExpr = (HBaseLiteral)right;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_EQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_EQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -235,8 +234,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
             HBaseLiteral litExpr = (HBaseLiteral)left;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_NOTEQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_NOTEQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -245,8 +243,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
             HBaseLiteral litExpr = (HBaseLiteral)right;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_NOTEQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_NOTEQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -267,8 +264,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
             HBaseLiteral litExpr = (HBaseLiteral)left;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_LTEQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_LTEQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -277,8 +273,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
             HBaseLiteral litExpr = (HBaseLiteral)right;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_GT);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_GT);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -299,8 +294,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
             HBaseLiteral litExpr = (HBaseLiteral)left;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_GTEQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_GTEQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -309,8 +303,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
             HBaseLiteral litExpr = (HBaseLiteral)right;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_LT);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_LT);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -331,8 +324,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
             HBaseLiteral litExpr = (HBaseLiteral)left;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_LT);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_LT);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -341,8 +333,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
             HBaseLiteral litExpr = (HBaseLiteral)right;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_GTEQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_GTEQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -363,8 +354,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
             HBaseLiteral litExpr = (HBaseLiteral)left;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_GT);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_GT);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -373,8 +363,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
             HBaseLiteral litExpr = (HBaseLiteral)right;
             Object litVal = TypeConversionHelper.convertTo(litExpr.getValue(), fieldExpr.getType());
-            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
-                litVal, Expression.OP_LTEQ);
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(), litVal, Expression.OP_LTEQ);
             stack.push(hbaseExpr);
             return hbaseExpr;
         }
@@ -399,12 +388,11 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                 {
                     filterComplete = false;
                 }
-                NucleusLogger.QUERY.debug(">> Primary " + expr +
-                    " is not stored in this document, so unexecutable in datastore");
+                NucleusLogger.QUERY.debug(">> Primary " + expr + " is not stored in this document, so unexecutable in datastore");
             }
             else
             {
-                HBaseFieldExpression fieldExpr = new HBaseFieldExpression(primDetails.type, primDetails.family, primDetails.column);
+                HBaseFieldExpression fieldExpr = new HBaseFieldExpression(primDetails.type, primDetails.family, primDetails.column, primDetails.mmd, primDetails.mapping);
                 stack.push(fieldExpr);
                 return fieldExpr;
             }
@@ -509,11 +497,15 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
         String family;
         String column;
         Class type;
-        public PrimaryDetails(Class type, String fam, String col)
+        AbstractMemberMetaData mmd;
+        MemberColumnMapping mapping;
+        public PrimaryDetails(Class type, String fam, String col, AbstractMemberMetaData mmd, MemberColumnMapping mapping)
         {
             this.type = type;
             this.family = fam;
             this.column = col;
+            this.mmd = mmd;
+            this.mapping = mapping;
         }
     }
 
@@ -549,6 +541,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             else
             {
                 AbstractMemberMetaData mmd = cmd.getMetaDataForMember(name);
+                MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
                 RelationType relationType = mmd.getRelationType(ec.getClassLoaderResolver());
                 if (relationType == RelationType.NONE)
                 {
@@ -571,7 +564,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                     }
                     String familyName = HBaseUtils.getFamilyNameForColumn(col);
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                    return new PrimaryDetails(mmd.getType(), familyName, qualifName);
+                    return new PrimaryDetails(mmd.getType(), familyName, qualifName, mmd, mapping);
                 }
 
                 boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
