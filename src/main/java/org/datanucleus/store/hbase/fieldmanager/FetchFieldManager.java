@@ -41,6 +41,7 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.MetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
@@ -579,6 +580,90 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                         Object myEnum = Enum.valueOf(type, (String)value);
                         return optional ? Optional.of(myEnum) : myEnum;
+                    }
+                    else if (mmd.hasCollection())
+                    {
+                        Collection<Object> coll;
+                        try
+                        {
+                            Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
+                            coll = (Collection<Object>) instanceType.newInstance();
+                        }
+                        catch (Exception e)
+                        {
+                            throw new NucleusDataStoreException(e.getMessage(), e);
+                        }
+
+                        TypeConverter elemConv = null;
+                        if (mmd.getElementMetaData() != null && mmd.getElementMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
+                        {
+                            elemConv = ec.getTypeManager().getTypeConverterForName(mmd.getElementMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
+                        }
+
+                        Collection dbColl = (Collection)value;
+                        Iterator dbCollIter = dbColl.iterator();
+                        while (dbCollIter.hasNext())
+                        {
+                            Object dbElem = dbCollIter.next();
+                            Object elem = dbElem;
+                            if (elemConv != null)
+                            {
+                                elem = elemConv.toMemberType(dbElem);
+                            }
+                            coll.add(elem);
+                        }
+
+                        return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), coll, true) : coll;
+                    }
+                    else if (mmd.hasMap())
+                    {
+                        Map map;
+                        try
+                        {
+                            Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), null);
+                            map = (Map) instanceType.newInstance();
+                        }
+                        catch (Exception e)
+                        {
+                            throw new NucleusDataStoreException(e.getMessage(), e);
+                        }
+
+                        TypeConverter keyConv = null;
+                        if (mmd.getKeyMetaData() != null && mmd.getKeyMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
+                        {
+                            keyConv = ec.getTypeManager().getTypeConverterForName(mmd.getKeyMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
+                        }
+                        TypeConverter valConv = null;
+                        if (mmd.getValueMetaData() != null && mmd.getValueMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
+                        {
+                            valConv = ec.getTypeManager().getTypeConverterForName(mmd.getValueMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
+                        }
+
+                        Map dbMap = (Map)value;
+                        Iterator<Map.Entry> dbMapEntryIter = dbMap.entrySet().iterator();
+                        while (dbMapEntryIter.hasNext())
+                        {
+                            Map.Entry dbMapEntry = dbMapEntryIter.next();
+                            Object key = dbMapEntry.getKey();
+                            if (keyConv != null)
+                            {
+                                key = keyConv.toMemberType(dbMapEntry.getKey());
+                            }
+
+                            Object val = dbMapEntry.getValue();
+                            if (valConv != null)
+                            {
+                                val = valConv.toMemberType(dbMapEntry.getValue());
+                            }
+
+                            map.put(key, val);
+                        }
+
+                        return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), map, true) : map;          
+                    }
+                    else if (mmd.hasArray())
+                    {
+                        
                     }
                     else
                     {

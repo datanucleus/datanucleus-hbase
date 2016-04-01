@@ -27,10 +27,12 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -42,6 +44,7 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.MetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
@@ -588,11 +591,91 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
             else if (mmd.hasCollection())
             {
-                // TODO Add handling for this
+                Collection coll = (Collection) value;
+                if (coll.isEmpty())
+                {
+                    writeObjectField(familyName, qualifName, value);
+                    SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                    return;
+                }
+
+                Collection dbColl = null;
+                if (value instanceof List || value instanceof Queue)
+                {
+                    dbColl = new ArrayList();
+                }
+                else
+                {
+                    dbColl = new HashSet();
+                }
+
+                TypeConverter elemConv = null;
+                if (mmd.getElementMetaData() != null && mmd.getElementMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
+                {
+                    elemConv = ec.getTypeManager().getTypeConverterForName(mmd.getElementMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
+                }
+
+                Iterator collIter = coll.iterator();
+                while (collIter.hasNext())
+                {
+                    Object element = collIter.next();
+                    Object datastoreValue = element;
+                    if (elemConv != null)
+                    {
+                        datastoreValue = elemConv.toDatastoreType(element);
+                    }
+                    dbColl.add(datastoreValue);
+                }
+                writeObjectField(familyName, qualifName, dbColl);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                return;
             }
             else if (mmd.hasMap())
             {
-                // TODO Add handling for this
+                Map map = (Map) value;
+                if (map.isEmpty())
+                {
+                    writeObjectField(familyName, qualifName, value);
+                    SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                    return;
+                }
+
+                TypeConverter keyConv = null;
+                if (mmd.getKeyMetaData() != null && mmd.getKeyMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
+                {
+                    keyConv = ec.getTypeManager().getTypeConverterForName(mmd.getKeyMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
+                }
+                TypeConverter valConv = null;
+                if (mmd.getValueMetaData() != null && mmd.getValueMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
+                {
+                    valConv = ec.getTypeManager().getTypeConverterForName(mmd.getValueMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
+                }
+
+                Iterator<Map.Entry> entryIter = map.entrySet().iterator();
+                Map dbMap = new HashMap();
+                while (entryIter.hasNext())
+                {
+                    Map.Entry entry = entryIter.next();
+
+                    Object key = entry.getKey();
+                    Object datastoreKey = key;
+                    if (keyConv != null)
+                    {
+                        datastoreKey = keyConv.toDatastoreType(key);
+                    }
+
+                    Object val = entry.getValue();
+                    Object datastoreVal = val;
+                    if (valConv != null)
+                    {
+                        datastoreVal = valConv.toDatastoreType(val);
+                    }
+
+                    dbMap.put(datastoreKey, datastoreVal);
+                }
+                writeObjectField(familyName, qualifName, dbMap);
+                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                return;
             }
             else if (mmd.hasArray())
             {
