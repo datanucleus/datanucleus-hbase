@@ -709,7 +709,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             int i = 0;
             for (Integer fldNo : persistableFields)
             {
-                reqdFieldNumbers[i] = fldNo;
+                reqdFieldNumbers[i++] = fldNo;
             }
 
             FetchFieldManager fm = new FetchFieldManager(op, result, table);
