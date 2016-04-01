@@ -157,7 +157,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             {
                 // Impossible to compile all to run in the datastore, so just exit
                 filterComplete = false;
-                NucleusLogger.QUERY.debug(">> compileFilter caught exception ", e);
+                NucleusLogger.QUERY.warn(">> Impossible to evaluate all of filter in-datastore : " + e.getMessage());
             }
 
             compileComponent = null;
