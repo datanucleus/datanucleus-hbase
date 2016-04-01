@@ -39,6 +39,7 @@ import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.ClassMetaData;
 import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataUtils;
@@ -82,11 +83,17 @@ class HBaseQueryUtils
                 (subclasses ? " and subclasses" : "") + (filter != null ? (" with filter=" + filter) : ""));
         }
 
-        Iterator<AbstractClassMetaData> cmdIter = cmds.iterator();
         List results = new ArrayList();
-        while (cmdIter.hasNext())
+        for (AbstractClassMetaData cmd : cmds)
         {
-            results.addAll(getObjectsOfType(ec, mconn, cmdIter.next(), ignoreCache, fetchPlan, filter, storeMgr));
+            if (cmd instanceof ClassMetaData && ((ClassMetaData)cmd).isAbstract())
+            {
+                // Omit any classes that are not instantiable (e.g abstract)
+            }
+            else
+            {
+                results.addAll(getObjectsOfType(ec, mconn, cmd, ignoreCache, fetchPlan, filter, storeMgr));
+            }
         }
 
         return results;
