@@ -898,6 +898,15 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
     protected byte[] getPersistableBytesForObject(Column col, Object value)
     {
+        if (value == null)
+        {
+            return null;
+        }
+        else if (value.getClass() == byte[].class)
+        {
+            return (byte[]) value;
+        }
+
         if (Boolean.class.isAssignableFrom(value.getClass()))
         {
             return Bytes.toBytes((Boolean)value);

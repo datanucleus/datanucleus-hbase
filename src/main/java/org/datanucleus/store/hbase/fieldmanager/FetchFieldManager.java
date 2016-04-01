@@ -508,38 +508,49 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         return memberValue;
                     }
 
+                    // Single column converter
                     Column col = mapping.getColumn(0);
                     String familyName = HBaseUtils.getFamilyNameForColumn(col);
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                    Object value = readObjectField(col, familyName, qualifName, result, mmd);
-                    if (value == null)
-                    {
-                        return null;
-                    }
 
-                    byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
                     Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
-                    if (datastoreType == String.class)
+                    if (datastoreType == byte[].class)
                     {
-                        returnValue = conv.toMemberType(value);
+                        // Special case : field was converted to byte[] by the TypeConverter
+                        byte[] datastoreValue = result.getValue(familyName.getBytes(), qualifName.getBytes());
+                        returnValue = conv.toMemberType(datastoreValue);
                     }
-                    else if (datastoreType == Long.class)
+                    else
                     {
-                        returnValue = conv.toMemberType(Bytes.toLong(bytes));
+                        Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                        if (value == null)
+                        {
+                            return null;
+                        }
+
+                        byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
+                        if (datastoreType == String.class)
+                        {
+                            returnValue = conv.toMemberType(value);
+                        }
+                        else if (datastoreType == Long.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toLong(bytes));
+                        }
+                        else if (datastoreType == Integer.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toInt(bytes));
+                        }
+                        else if (datastoreType == Double.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toDouble(bytes));
+                        }
+                        else if (datastoreType == Boolean.class)
+                        {
+                            returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
+                        }
+                        // TODO Cater for other types
                     }
-                    else if (datastoreType == Integer.class)
-                    {
-                        returnValue = conv.toMemberType(Bytes.toInt(bytes));
-                    }
-                    else if (datastoreType == Double.class)
-                    {
-                        returnValue = conv.toMemberType(Bytes.toDouble(bytes));
-                    }
-                    else if (datastoreType == Boolean.class)
-                    {
-                        returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
-                    }
-                    // TODO Cater for other types
                 }
                 else
                 {
