@@ -514,7 +514,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 else
                 {
                     Column col = mapping.getColumn(0);
-                    byte[] valueColBytes = getPersistableBytesForObject(col, value);
+                    byte[] valueColBytes = getPersistableBytesForObject(col, datastoreValue);
                     put.addColumn(HBaseUtils.getFamilyNameForColumn(col).getBytes(), HBaseUtils.getQualifierNameForColumn(col).getBytes(), valueColBytes);
                 }
                 return;
@@ -585,6 +585,18 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             {
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((String)value).getBytes());
                 return;
+            }
+            else if (mmd.hasCollection())
+            {
+                // TODO Add handling for this
+            }
+            else if (mmd.hasMap())
+            {
+                // TODO Add handling for this
+            }
+            else if (mmd.hasArray())
+            {
+                // TODO Add handling for this
             }
 
             // Fallback to built-in String converters
