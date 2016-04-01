@@ -45,6 +45,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.DiscriminatorMetaData;
 import org.datanucleus.metadata.DiscriminatorStrategy;
+import org.datanucleus.metadata.FieldPersistenceModifier;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
@@ -691,8 +692,28 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
+            Set<Integer> persistableFields = new HashSet<Integer>();
+            for (int i=0;i<fieldNumbers.length;i++)
+            {
+                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
+                if (mmd.getPersistenceModifier() == FieldPersistenceModifier.PERSISTENT)
+                {
+                    persistableFields.add(fieldNumbers[i]);
+                }
+                else
+                {
+                    op.replaceField(fieldNumbers[i], op.provideField(fieldNumbers[i]));
+                }
+            }
+            int[] reqdFieldNumbers = new int[persistableFields.size()];
+            int i = 0;
+            for (Integer fldNo : persistableFields)
+            {
+                reqdFieldNumbers[i] = fldNo;
+            }
+
             FetchFieldManager fm = new FetchFieldManager(op, result, table);
-            op.replaceFields(cmd.getAllMemberPositions(), fm);
+            op.replaceFields(reqdFieldNumbers, fm);
 
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd != null && op.getTransactionalVersion() == null)
