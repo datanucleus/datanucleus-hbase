@@ -86,8 +86,12 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             Iterator<String> iter = classNamesLoaded.iterator();
             while (iter.hasNext())
             {
-                AbstractClassMetaData cmd = mmgr.getMetaDataForClass(iter.next(), clr);
-                metadataListener.loaded(cmd);
+                String className = iter.next();
+                AbstractClassMetaData cmd = mmgr.getMetaDataForClass(className, clr);
+                if (cmd != null)
+                {
+                    metadataListener.loaded(cmd);
+                }
             }
         }
 
