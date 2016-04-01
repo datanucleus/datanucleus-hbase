@@ -421,6 +421,7 @@ class HBaseQueryUtils
 
         final FieldManager fm = new FetchFieldManager(ec, cmd, result, table);
         SCOID id = new SCOID(cmd.getFullClassName());
+        Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, 
             new FieldValues()
             {
@@ -437,7 +438,7 @@ class HBaseQueryUtils
                 {
                     return null;
                 }
-            }, null, ignoreCache, false);
+            }, type, ignoreCache, false);
 
         if (cmd.isVersioned())
         {
