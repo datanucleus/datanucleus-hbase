@@ -759,6 +759,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                                     {
                                         colValue = Bytes.toBigDecimal(bytes);
                                     }
+                                    else if (java.util.Date.class.isAssignableFrom(colTypes[i]))
+                                    {
+                                        String datastoreValue = new String(bytes);
+                                        TypeConverter<java.util.Date, String> dateStrConv = ec.getTypeManager().getTypeConverterForType(colTypes[i], String.class);
+                                        java.util.Date datastoreDate = dateStrConv.toMemberType(datastoreValue);
+                                        colValue = conv.toMemberType(datastoreDate);
+                                    }
                                     else
                                     {
                                         NucleusLogger.PERSISTENCE.warn("Retrieve of column " + col + " is for type " + colTypes[i] + " but this is not yet supported. Report this");
