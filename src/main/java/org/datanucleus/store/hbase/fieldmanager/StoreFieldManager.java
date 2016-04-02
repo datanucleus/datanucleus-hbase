@@ -990,6 +990,12 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             return ((Enum)value).name().getBytes();
         }
+        else if (java.util.Date.class.isAssignableFrom(value.getClass()))
+        {
+            TypeConverter<java.util.Date, String> dateStrConv = ec.getTypeManager().getTypeConverterForType(value.getClass(), String.class);
+            String datastoreVal = dateStrConv.toDatastoreType((java.util.Date) value);
+            return datastoreVal.getBytes();
+        }
         else
         {
             NucleusLogger.PERSISTENCE.warn("Persistence of column " + col + " has value of type " + value.getClass().getName() + " but no conversion to bytes defined. Report this");

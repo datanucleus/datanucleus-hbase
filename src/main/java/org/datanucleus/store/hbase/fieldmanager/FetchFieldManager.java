@@ -786,24 +786,22 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
 
                     Class datastoreType = TypeConverterHelper.getDatastoreTypeForTypeConverter(conv, mmd.getType());
+                    byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
                     if (datastoreType == byte[].class)
                     {
-                        // Special case : field was converted to byte[] by the TypeConverter
-                        byte[] datastoreValue = result.getValue(familyName.getBytes(), qualifName.getBytes());
-                        returnValue = conv.toMemberType(datastoreValue);
+                        // Special case : TypeConverter converts field type to byte[] so just pass in to converter
+                        returnValue = conv.toMemberType(bytes);
                     }
                     else
                     {
-                        Object value = readObjectField(col, familyName, qualifName, result, mmd);
-                        if (value == null)
+                        if (bytes == null)
                         {
                             return null;
                         }
 
-                        byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
                         if (datastoreType == String.class)
                         {
-                            returnValue = conv.toMemberType(value);
+                            returnValue = conv.toMemberType(new String(bytes));
                         }
                         else if (datastoreType == Long.class)
                         {
@@ -820,6 +818,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         else if (datastoreType == Boolean.class)
                         {
                             returnValue = conv.toMemberType(Bytes.toBoolean(bytes));
+                        }
+                        else if (java.util.Date.class.isAssignableFrom(datastoreType))
+                        {
+                            String datastoreValue = new String(bytes);
+                            TypeConverter<java.util.Date, String> dateStrConv = ec.getTypeManager().getTypeConverterForType(datastoreType, String.class);
+                            java.util.Date datastoreDate = dateStrConv.toMemberType(datastoreValue);
+                            returnValue = conv.toMemberType(datastoreDate);
                         }
                         // TODO Cater for other types
                     }
@@ -945,7 +950,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     }
                     else if (mmd.hasArray())
                     {
-                        
+                        // TODO Support this
                     }
                     else
                     {
@@ -1023,6 +1028,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             {
                 return fetchIntInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
             }
+        }
+        else if (java.util.Date.class.isAssignableFrom(type))
+        {
+            // TODO What about java.util.Date?
         }
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
