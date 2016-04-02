@@ -153,10 +153,15 @@ class HBaseQueryUtils
                         }
                         else
                         {
-                            Column col = table.getMemberColumnMappingForMember(mmd).getColumn(0); // TODO Support multicol mapping
-                            byte[] familyName = HBaseUtils.getFamilyNameForColumn(col).getBytes();
-                            byte[] qualifName = HBaseUtils.getQualifierNameForColumn(col).getBytes();
-                            scan.addColumn(familyName, qualifName);
+                            MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
+                            int numCols = mapping.getNumberOfColumns();
+                            for (int colNo=0;colNo<numCols;colNo++)
+                            {
+                                Column col = mapping.getColumn(colNo);
+                                byte[] familyName = HBaseUtils.getFamilyNameForColumn(col).getBytes();
+                                byte[] qualifName = HBaseUtils.getQualifierNameForColumn(col).getBytes();
+                                scan.addColumn(familyName, qualifName);
+                            }
                         }
                     }
 
