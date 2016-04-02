@@ -17,12 +17,12 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase;
 
-import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.IdentityStrategy;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataListener;
+import org.datanucleus.util.NucleusLogger;
 
 /**
  * Listener for the load of metadata for classes.
@@ -30,11 +30,8 @@ import org.datanucleus.metadata.MetaDataListener;
  */
 public class HBaseMetaDataListener implements MetaDataListener
 {
-    private HBaseStoreManager storeManager;
-
     HBaseMetaDataListener(HBaseStoreManager storeManager)
     {
-        this.storeManager = storeManager;
     }
 
     /* (non-Javadoc)
@@ -46,8 +43,10 @@ public class HBaseMetaDataListener implements MetaDataListener
         {
             if (cmd.getIdentityMetaData() != null && cmd.getIdentityMetaData().getValueStrategy() == IdentityStrategy.IDENTITY)
             {
-                throw new NucleusUserException("Class " + cmd.getFullClassName() +
-                    " has been specified to use datastore-identity with IDENTITY value generation, but not supported on HBase");
+                // Change to INCREMENT since we don't support IDENTITY
+                cmd.getIdentityMetaData().setValueStrategy(IdentityStrategy.INCREMENT);
+                NucleusLogger.METADATA.warn("Class " + cmd.getFullClassName() +
+                    " has been specified to use datastore-identity with IDENTITY value generation, but not supported on HBase. Using INCREMENT");
             }
         }
         else if (cmd.getIdentityType() == IdentityType.APPLICATION)
@@ -58,15 +57,17 @@ public class HBaseMetaDataListener implements MetaDataListener
                 AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNumbers[i]);
                 if (mmd.getValueStrategy() == IdentityStrategy.IDENTITY)
                 {
-                    throw new NucleusUserException("Field " + mmd.getFullFieldName() +
-                        " has been specified to use IDENTITY value generation, but not supported on HBase");
+                    // Change to INCREMENT since we don't support IDENTITY
+                    cmd.getIdentityMetaData().setValueStrategy(IdentityStrategy.INCREMENT);
+                    NucleusLogger.METADATA.warn("Field " + mmd.getFullFieldName() +
+                        " has been specified to use IDENTITY value generation, but not supported on HBase. Using INCREMENT");
                 }
             }
         }
 
-        if (storeManager.getSchemaHandler().isAutoCreateTables() || storeManager.getSchemaHandler().isAutoCreateColumns())
+        /*if (storeManager.getSchemaHandler().isAutoCreateTables() || storeManager.getSchemaHandler().isAutoCreateColumns())
         {
             ((HBaseSchemaHandler)storeManager.getSchemaHandler()).createSchemaForClass(storeManager, cmd, false);
-        }
+        }*/
     }
 }
