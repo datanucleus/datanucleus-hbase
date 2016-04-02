@@ -319,7 +319,7 @@ public class HBaseUtils
      */
     static byte[] getRowKeyForPkValue(Object[] pkValues, NucleusContext nucCtx) throws IOException
     {
-        boolean useSerialisation = nucCtx.getConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
+        boolean useSerialisation = nucCtx.getConfiguration().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_SERIALISED_PK);
         if (pkValues.length == 1 && !useSerialisation)
         {
             Object pkValue = pkValues[0];

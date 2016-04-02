@@ -43,11 +43,9 @@ Contributors:
 
     <!-- PERSISTENCE PROPERTIES -->
     <extension point="org.datanucleus.persistence_properties">
-        <persistence-property name="datanucleus.hbase.enforceUniquenessInApplication" datastore="true" value="false"
-            validator="org.datanucleus.properties.BooleanPropertyValidator"/>
-        <persistence-property name="datanucleus.hbase.serialisedPK" datastore="true" value="false"
-            validator="org.datanucleus.properties.BooleanPropertyValidator"/>
-        <persistence-property name="datanucleus.hbase.tablePoolMaxSize" datastore="true" value="100"
-            validator="org.datanucleus.properties.IntegerPropertyValidator"/>
+        <persistence-property name="datanucleus.hbase.relationUsesPersistableId" datastore="true" value="true" validator="org.datanucleus.properties.BooleanPropertyValidator"/>
+        <persistence-property name="datanucleus.hbase.enforceUniquenessInApplication" datastore="true" value="false" validator="org.datanucleus.properties.BooleanPropertyValidator"/>
+        <persistence-property name="datanucleus.hbase.serialisedPK" datastore="true" value="false" validator="org.datanucleus.properties.BooleanPropertyValidator"/>
+        <persistence-property name="datanucleus.hbase.tablePoolMaxSize" datastore="true" value="100" validator="org.datanucleus.properties.IntegerPropertyValidator"/>
     </extension>
 </plugin>

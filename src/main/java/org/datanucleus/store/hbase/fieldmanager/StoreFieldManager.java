@@ -41,6 +41,7 @@ import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
+import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
@@ -51,6 +52,7 @@ import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.exceptions.ReachableObjectNotCascadedException;
 import org.datanucleus.store.fieldmanager.AbstractStoreFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
+import org.datanucleus.store.hbase.HBaseStoreManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
@@ -366,8 +368,16 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             // Persist identity in the column of this object
             Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
-            Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
-            writeObjectField(familyName, qualifName, valueId);
+            Object valueID = ec.getApiAdapter().getIdForObject(valuePC);
+            if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+            {
+                writeObjectField(familyName, qualifName, IdentityUtils.getPersistableIdentityForId(valueID));
+            }
+            else
+            {
+                // Legacy
+                writeObjectField(familyName, qualifName, valueID);
+            }
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
@@ -417,7 +427,15 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = collIter.next();
                     Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
                     Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                    collIds.add(elementID);
+                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    {
+                        collIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
+                    }
+                    else
+                    {
+                        // Legacy
+                        collIds.add(elementID);
+                    }
                 }
 
                 if (mmd.getCollection().isSerializedElement())
@@ -444,11 +462,19 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     {
                         Object pKey = ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
                         mapKey = ec.getApiAdapter().getIdForObject(pKey);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            mapKey = IdentityUtils.getPersistableIdentityForId(mapKey);
+                        }
                     }
                     if (ec.getApiAdapter().isPersistable(mapValue))
                     {
                         Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
                         mapValue = ec.getApiAdapter().getIdForObject(pVal);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            mapValue = IdentityUtils.getPersistableIdentityForId(mapValue);
+                        }
                     }
                     mapIds.put(mapKey, mapValue);
                 }
@@ -471,7 +497,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = Array.get(value, i);
                     Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
                     Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                    arrIds.add(elementID);
+                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    {
+                        arrIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
+                    }
+                    else
+                    {
+                        arrIds.add(elementID);
+                    }
                 }
 
                 if (mmd.getArray().isSerializedElement())

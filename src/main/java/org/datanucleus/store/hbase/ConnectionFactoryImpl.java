@@ -97,7 +97,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             config.set("hbase.master", serverName + ":" + portName);
         }
 
-        int maxSize = storeMgr.getIntProperty("datanucleus.hbase.tablePoolMaxSize");
+        int maxSize = storeMgr.getIntProperty(HBaseStoreManager.PROPERTY_HBASE_TABLE_POOL_MAXSIZE);
         maxSize = maxSize > 0 ? maxSize : Integer.MAX_VALUE;
     }
 

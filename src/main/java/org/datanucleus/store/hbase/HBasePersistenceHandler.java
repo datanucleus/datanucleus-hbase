@@ -108,7 +108,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         {
             String tableName = table.getName();
             org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
-            boolean enforceUniquenessInApp = storeMgr.getBooleanProperty("datanucleus.hbase.enforceUniquenessInApplication", false);
+            boolean enforceUniquenessInApp = storeMgr.getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_ENFORCE_UNIQUENESS_IN_APPLICATION, false);
             if (enforceUniquenessInApp)
             {
                 NucleusLogger.DATASTORE_PERSIST.info("User requesting to enforce uniqueness of object identity in their application, so not checking for existence");

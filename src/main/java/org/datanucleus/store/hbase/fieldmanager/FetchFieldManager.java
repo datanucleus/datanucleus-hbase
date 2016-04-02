@@ -37,16 +37,20 @@ import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.exceptions.NucleusObjectNotFoundException;
 import org.datanucleus.exceptions.NucleusUserException;
+import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
+import org.datanucleus.store.hbase.HBaseStoreManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
@@ -237,12 +241,14 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
         boolean optional = false;
+        Class type = mmd.getType();
         if (Optional.class.isAssignableFrom(mmd.getType()))
         {
             if (relationType != RelationType.NONE)
             {
                 relationType = RelationType.ONE_TO_ONE_UNI;
             }
+            type = clr.classForName(mmd.getCollection().getElementType());
             optional = true;
         }
 
@@ -269,8 +275,68 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
 
             // The stored value was the identity
-            Object pc = ec.findObject(value, true, true, null);
-            return optional ? Optional.of(pc) : pc;
+            Object pc = null;
+            if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+            {
+                String persistableId = (String) value;
+                try
+                {
+                    AbstractClassMetaData mmdCmd = ec.getMetaDataManager().getMetaDataForClass(type, clr);
+                    if (mmdCmd != null)
+                    {
+                        pc = IdentityUtils.getObjectFromPersistableIdentity(persistableId, mmdCmd, ec);
+                        return optional ? Optional.of(pc) : pc;
+                    }
+
+                    String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_FIELD, clr, ec.getMetaDataManager());
+                    if (implNames != null && implNames.length == 1)
+                    {
+                        // Only one possible implementation, so use that
+                        mmdCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
+                        pc = IdentityUtils.getObjectFromPersistableIdentity(persistableId, mmdCmd, ec);
+                        return optional ? Optional.of(pc) : pc;
+                    }
+                    else if (implNames != null && implNames.length > 1)
+                    {
+                        // Multiple implementations, so try each implementation in turn (note we only need this if
+                        // some impls have different "identity" type from each other)
+                        for (String implName : implNames)
+                        {
+                            try
+                            {
+                                mmdCmd = ec.getMetaDataManager().getMetaDataForClass(implName, clr);
+                                pc = IdentityUtils.getObjectFromPersistableIdentity(persistableId, mmdCmd, ec);
+                                return optional ? Optional.of(pc) : pc;
+                            }
+                            catch (NucleusObjectNotFoundException nonfe)
+                            {
+                                // Object no longer present in the datastore, must have been deleted
+                                throw nonfe;
+                            }
+                            catch (Exception e)
+                            {
+                                // Not possible with this implementation
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new NucleusUserException(
+                            "We do not currently support the field type of " + mmd.getFullFieldName() + " which has an interdeterminate type (e.g interface or Object element types)");
+
+                    }
+                }
+                catch (NucleusObjectNotFoundException onfe)
+                {
+                    NucleusLogger.PERSISTENCE.warn("Object=" + op + " field=" + mmd.getFullFieldName() + " has id=" + persistableId + " but could not instantiate object with that identity");
+                }
+            }
+            else
+            {
+                // Legacy TODO Remove this
+                pc = ec.findObject(value, true, true, null);
+            }
+            return optional ? (pc != null ? Optional.of(pc) : Optional.empty()) : pc;
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
@@ -312,21 +378,117 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     throw new NucleusException("Don't currently support serialized collection elements (field=" + mmd.getFullFieldName() + ")");
                 }
 
+                AbstractClassMetaData elemCmd = mmd.getCollection().getElementClassMetaData(clr, ec.getMetaDataManager());
+                if (elemCmd == null)
+                {
+                    // Try any listed implementations
+                    String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_COLLECTION_ELEMENT, clr, ec.getMetaDataManager());
+                    if (implNames != null && implNames.length > 0)
+                    {
+                        // Just use first implementation TODO What if the impls have different id type?
+                        elemCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
+                    }
+                    if (elemCmd == null)
+                    {
+                        throw new NucleusUserException("We do not currently support the field type of " + mmd.getFullFieldName() + 
+                            " which has a collection of interdeterminate element type (e.g interface or Object element types)");
+                    }
+                }
+
                 Collection collIds = (Collection)value;
                 Iterator idIter = collIds.iterator();
+                boolean changeDetected = false;
                 while (idIter.hasNext())
                 {
                     Object elementId = idIter.next();
-                    coll.add(ec.findObject(elementId, true, true, null));
+                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    {
+                        String persistableId = (String)elementId;
+                        if (persistableId.equals("NULL"))
+                        {
+                            // Null element
+                            coll.add(null);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                coll.add(IdentityUtils.getObjectFromPersistableIdentity(persistableId, elemCmd, ec));
+                            }
+                            catch (NucleusObjectNotFoundException onfe)
+                            {
+                                // Object no longer exists. Deleted by user? so ignore
+                                changeDetected = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        coll.add(ec.findObject(elementId, true, true, null));
+                    }
                 }
+
                 if (op != null)
                 {
-                    return SCOUtils.wrapSCOField(op, fieldNumber, coll, true);
+                    // Wrap if SCO
+                    coll = (Collection) SCOUtils.wrapSCOField(op, fieldNumber, coll, true);
+                    if (changeDetected)
+                    {
+                        op.makeDirty(mmd.getAbsoluteFieldNumber());
+                    }
                 }
                 return coll;
             }
             else if (mmd.hasMap())
             {
+                if (mmd.getMap().isSerializedKey() || mmd.getMap().isSerializedValue())
+                {
+                    // TODO Support this
+                    throw new NucleusException("Don't currently support serialized map keys/values (field=" + mmd.getFullFieldName() + ")");
+                }
+
+                Map mapIds = (Map)value;
+                AbstractClassMetaData keyCmd = null;
+                if (mmd.getMap().keyIsPersistent())
+                {
+                    keyCmd = mmd.getMap().getKeyClassMetaData(clr, ec.getMetaDataManager());
+                    if (keyCmd == null)
+                    {
+                        // Try any listed implementations
+                        String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_MAP_KEY, clr,
+                            ec.getMetaDataManager());
+                        if (implNames != null && implNames.length == 1)
+                        {
+                            keyCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
+                        }
+                        if (keyCmd == null)
+                        {
+                            throw new NucleusUserException(
+                                    "We do not currently support the field type of " + mmd.getFullFieldName() + " which has a map of interdeterminate key type (e.g interface or Object element types)");
+                        }
+                    }
+                }
+                AbstractClassMetaData valCmd = null;
+                if (mmd.getMap().valueIsPersistent())
+                {
+                    valCmd = mmd.getMap().getValueClassMetaData(clr, ec.getMetaDataManager());
+                    if (valCmd == null)
+                    {
+                        // Try any listed implementations
+                        String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_MAP_VALUE, clr,
+                            ec.getMetaDataManager());
+                        if (implNames != null && implNames.length == 1)
+                        {
+                            valCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
+                        }
+                        if (valCmd == null)
+                        {
+                            throw new NucleusUserException(
+                                    "We do not currently support the field type of " + mmd.getFullFieldName() + " which has a map of interdeterminate value type (e.g interface or Object element types)");
+                        }
+                    }
+                }
+
                 Map map;
                 try
                 {
@@ -338,34 +500,84 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     throw new NucleusDataStoreException(e.getMessage(), e);
                 }
 
-                if (mmd.getMap().isSerializedKey() || mmd.getMap().isSerializedValue())
-                {
-                    // TODO Support this
-                    throw new NucleusException("Don't currently support serialized map keys/values (field=" + mmd.getFullFieldName() + ")");
-                }
-
-                Map mapIds = (Map)value;
                 Iterator<Map.Entry> mapIdIter = mapIds.entrySet().iterator();
+                boolean changeDetected = false;
                 while (mapIdIter.hasNext())
                 {
                     Map.Entry entry = mapIdIter.next();
                     Object mapKey = entry.getKey();
                     Object mapValue = entry.getValue();
-                    if (mmd.getMap().getKeyClassMetaData(clr, ec.getMetaDataManager()) != null)
+                    boolean keySet = true;
+                    boolean valSet = true;
+
+                    if (mmd.getMap().keyIsPersistent())
                     {
-                        // Map key must be an "id"
-                        mapKey = ec.findObject(mapKey, true, true, null);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            String keyPersistableId = (String)mapKey;
+                            try
+                            {
+                                mapKey = IdentityUtils.getObjectFromPersistableIdentity(keyPersistableId, keyCmd, ec);
+                            }
+                            catch (NucleusObjectNotFoundException onfe)
+                            {
+                                // Object no longer exists. Deleted by user? so ignore
+                                changeDetected = true;
+                                keySet = false;
+                            }
+                        }
+                        else
+                        {
+                            // Legacy "id"
+                            mapKey = ec.findObject(mapKey, true, true, null);
+                        }
                     }
-                    if (mmd.getMap().getValueClassMetaData(clr, ec.getMetaDataManager()) != null)
+
+                    if (mmd.getMap().valueIsPersistent())
                     {
-                        // Map value must be an "id"
-                        mapValue = ec.findObject(mapValue, true, true, null);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            // TODO Support serialised value which will be of type ByteBuffer
+                            String valPersistableId = (String)mapValue;
+                            if (valPersistableId.equals("NULL"))
+                            {
+                                mapValue = null;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    mapValue = IdentityUtils.getObjectFromPersistableIdentity(valPersistableId, valCmd, ec);
+                                }
+                                catch (NucleusObjectNotFoundException onfe)
+                                {
+                                    // Object no longer exists. Deleted by user? so ignore
+                                    changeDetected = true;
+                                    valSet = false;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Legacy "id"
+                            mapValue = ec.findObject(mapValue, true, true, null);
+                        }
                     }
-                    map.put(mapKey, mapValue);
+
+                    if (keySet && valSet)
+                    {
+                        map.put(mapKey, mapValue);
+                    }
                 }
+
                 if (op != null)
                 {
-                    return SCOUtils.wrapSCOField(op, fieldNumber, map, true);
+                    // Wrap if SCO
+                    map = (Map) SCOUtils.wrapSCOField(op, fieldNumber, map, true);
+                    if (changeDetected)
+                    {
+                        op.makeDirty(fieldNumber);
+                    }
                 }
                 return map;
             }
@@ -377,14 +589,74 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     throw new NucleusException("Don't currently support serialized array elements (field=" + mmd.getFullFieldName() + ")");
                 }
 
+                AbstractClassMetaData elemCmd = mmd.getArray().getElementClassMetaData(clr, ec.getMetaDataManager());
+                if (elemCmd == null)
+                {
+                    // Try any listed implementations
+                    String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_ARRAY_ELEMENT, clr, ec.getMetaDataManager());
+                    if (implNames != null && implNames.length == 1)
+                    {
+                        elemCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
+                    }
+                    if (elemCmd == null)
+                    {
+                        throw new NucleusUserException(
+                                "We do not currently support the field type of " + mmd.getFullFieldName() + " which has an array of interdeterminate element type (e.g interface or Object element types)");
+                    }
+                }
+
                 Collection arrIds = (Collection)value;
                 Object array = Array.newInstance(mmd.getType().getComponentType(), arrIds.size());
                 Iterator idIter = arrIds.iterator();
-                int i=0;
+                boolean changeDetected = false;
+                int pos=0;
                 while (idIter.hasNext())
                 {
                     Object elementId = idIter.next();
-                    Array.set(array, i, ec.findObject(elementId, true, true, null));
+                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    {
+                        String persistableId = (String)elementId;
+                        if (persistableId.equals("NULL"))
+                        {
+                            // Null element
+                            Array.set(array, pos++, null);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                Array.set(array, pos++, IdentityUtils.getObjectFromPersistableIdentity(persistableId, elemCmd, ec));
+                            }
+                            catch (NucleusObjectNotFoundException onfe)
+                            {
+                                // Object no longer exists. Deleted by user? so ignore
+                                changeDetected = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Legacy TODO Remove this
+                        Array.set(array, pos, ec.findObject(elementId, true, true, null));
+                    }
+                }
+
+                if (changeDetected)
+                {
+                    if (pos < arrIds.size())
+                    {
+                        // Some elements not found, so resize the array
+                        Object arrayOld = array;
+                        array = Array.newInstance(mmd.getType().getComponentType(), pos);
+                        for (int j = 0; j < pos; j++)
+                        {
+                            Array.set(array, j, Array.get(arrayOld, j));
+                        }
+                    }
+                    if (op != null)
+                    {
+                        op.makeDirty(mmd.getAbsoluteFieldNumber());
+                    }
                 }
                 return array;
             }
@@ -558,7 +830,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     String familyName = HBaseUtils.getFamilyNameForColumn(col);
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                     Object value = readObjectField(col, familyName, qualifName, result, mmd);
-                    Class type = (optional ? clr.classForName(mmd.getCollection().getElementType()) : mmd.getType());
                     if (value == null)
                     {
                         return optional ? Optional.empty() : null;
