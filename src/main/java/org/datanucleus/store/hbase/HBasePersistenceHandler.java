@@ -256,7 +256,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
             {
                 NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put",
-                    StringUtils.toJVMIDString(op.getObject()), tableName, put));
+                    StringUtils.toJVMIDString(op.getObject()), tableName, put.toString(50)));
             }
             htable.put(put);
             if (ec.getStatistics() != null)
