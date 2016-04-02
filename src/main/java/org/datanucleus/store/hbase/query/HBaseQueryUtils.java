@@ -484,8 +484,10 @@ class HBaseQueryUtils
             MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds);
             if (RelationType.isRelationSingleValued(relationType))
             {
-                // TODO Catch bidirectional relations
-                addColumnsToScanForEmbeddedMember(scan, subEmbMmds, table, ec);
+                if (embMmd.isEmbedded()) // Avoid infinite recursion with bidir relations
+                {
+                    addColumnsToScanForEmbeddedMember(scan, subEmbMmds, table, ec);
+                }
             }
             else
             {
