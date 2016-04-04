@@ -616,6 +616,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
                     {
                         String persistableId = (String)elementId;
+                        
                         if (persistableId.equals("NULL"))
                         {
                             // Null element

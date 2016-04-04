@@ -425,16 +425,30 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 while (collIter.hasNext())
                 {
                     Object element = collIter.next();
-                    Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
-                    Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    if (element != null)
                     {
-                        collIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
+                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            collIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
+                        }
+                        else
+                        {
+                            // Legacy
+                            collIds.add(elementID);
+                        }
                     }
                     else
                     {
-                        // Legacy
-                        collIds.add(elementID);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            collIds.add("NULL");
+                        }
+                        else
+                        {
+                            collIds.addAll(null);
+                        }
                     }
                 }
 
@@ -469,12 +483,23 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     }
                     if (ec.getApiAdapter().isPersistable(mapValue))
                     {
-                        Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
-                        mapValue = ec.getApiAdapter().getIdForObject(pVal);
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (mapValue != null)
                         {
-                            mapValue = IdentityUtils.getPersistableIdentityForId(mapValue);
+                            Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
+                            mapValue = ec.getApiAdapter().getIdForObject(pVal);
+                            if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                            {
+                                mapValue = IdentityUtils.getPersistableIdentityForId(mapValue);
+                            }
                         }
+                        else
+                        {
+                            mapValue = "NULL";
+                        }
+                    }
+                    if (mapValue == null)
+                    {
+                        mapValue = "NULL";
                     }
                     mapIds.put(mapKey, mapValue);
                 }
@@ -495,15 +520,29 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 for (int i=0;i<Array.getLength(value);i++)
                 {
                     Object element = Array.get(value, i);
-                    Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
-                    Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    if (element != null)
                     {
-                        arrIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
+                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            arrIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
+                        }
+                        else
+                        {
+                            arrIds.add(elementID);
+                        }
                     }
                     else
                     {
-                        arrIds.add(elementID);
+                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        {
+                            arrIds.add("NULL");
+                        }
+                        else
+                        {
+                            arrIds.add(null);
+                        }
                     }
                 }
 

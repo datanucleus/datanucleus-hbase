@@ -45,6 +45,7 @@ import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.schema.table.Column;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.converters.TypeConverter;
 
@@ -216,13 +217,13 @@ public class HBaseUtils
         return version;
     }
 
-    public static Put getPutForObject(ObjectProvider op) throws IOException
+    public static Put getPutForObject(ObjectProvider op, Table schemaTable) throws IOException
     {
         byte[] rowKey = (byte[]) op.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
         {
             AbstractClassMetaData cmd = op.getClassMetaData();
-            final Object[] pkValues = findKeyObjects(op, cmd);
+            final Object[] pkValues = findKeyObjects(op, cmd, schemaTable);
             ExecutionContext ec = op.getExecutionContext();
             if (ec.getStatistics() != null)
             {
@@ -234,13 +235,13 @@ public class HBaseUtils
         return new Put(rowKey);
     }
 
-    public static Delete getDeleteForObject(ObjectProvider op) throws IOException
+    public static Delete getDeleteForObject(ObjectProvider op, Table schemaTable) throws IOException
     {
         byte[] rowKey = (byte[]) op.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
         {
             AbstractClassMetaData cmd = op.getClassMetaData();
-            final Object[] pkValues = findKeyObjects(op, cmd);
+            final Object[] pkValues = findKeyObjects(op, cmd, schemaTable);
             ExecutionContext ec = op.getExecutionContext();
             if (ec.getStatistics() != null)
             {
@@ -252,13 +253,13 @@ public class HBaseUtils
         return new Delete(rowKey);
     }
 
-    public static Get getGetForObject(ObjectProvider op) throws IOException
+    public static Get getGetForObject(ObjectProvider op, Table schemaTable) throws IOException
     {
         byte[] rowKey = (byte[]) op.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
         {
             AbstractClassMetaData cmd = op.getClassMetaData();
-            final Object[] pkValues = findKeyObjects(op, cmd);
+            final Object[] pkValues = findKeyObjects(op, cmd, schemaTable);
             ExecutionContext ec = op.getExecutionContext();
             if (ec.getStatistics() != null)
             {
@@ -270,19 +271,19 @@ public class HBaseUtils
         return new Get(rowKey);
     }
 
-    public static Result getResultForObject(ObjectProvider op, org.apache.hadoop.hbase.client.Table table) throws IOException
+    public static Result getResultForObject(ObjectProvider op, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
     {
-        Get get = getGetForObject(op);
+        Get get = getGetForObject(op, schemaTable);
         return table.get(get);
     }
 
-    public static boolean objectExistsInTable(ObjectProvider op, org.apache.hadoop.hbase.client.Table table) throws IOException
+    public static boolean objectExistsInTable(ObjectProvider op, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
     {
-        Get get = getGetForObject(op);
+        Get get = getGetForObject(op, schemaTable);
         return table.exists(get);
     }
 
-    private static Object[] findKeyObjects(final ObjectProvider op, final AbstractClassMetaData cmd)
+    private static Object[] findKeyObjects(final ObjectProvider op, final AbstractClassMetaData cmd, Table schemaTable)
     {
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
@@ -290,17 +291,24 @@ public class HBaseUtils
         }
         else if (cmd.getIdentityType() == IdentityType.APPLICATION)
         {
-            final int[] fieldNumbers = op.getClassMetaData().getPKMemberPositions();
+            final int[] fieldNumbers = cmd.getPKMemberPositions();
             final Object[] keyObjects = new Object[fieldNumbers.length];
             for (int i = 0; i < fieldNumbers.length; i++)
             {
+                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
+                MemberColumnMapping mapping = schemaTable.getMemberColumnMappingForMember(mmd);
                 keyObjects[i] = op.provideField(fieldNumbers[i]);
+                if (mapping.getTypeConverter() != null)
+                {
+                    // Lookup using converted value
+                    keyObjects[i] = mapping.getTypeConverter().toDatastoreType(keyObjects[i]);
+                }
             }
             return keyObjects;
         }
         else
         {
-            final int[] fieldNumbers = op.getClassMetaData().getAllMemberPositions();
+            final int[] fieldNumbers = cmd.getAllMemberPositions();
             final Object[] keyObjects = new Object[fieldNumbers.length];
             for (int i = 0; i < fieldNumbers.length; i++)
             {
@@ -339,6 +347,7 @@ public class HBaseUtils
             {
                 return Bytes.toBytes(((Short) pkValue).shortValue());
             }
+            // TODO Support other types?
         }
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
