@@ -763,7 +763,6 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
     public void locateObject(ObjectProvider op)
     {
-        NucleusLogger.GENERAL.info(">> locateObject id=" + op.getInternalObjectId() + " " + StringUtils.toJVMIDString(op.getInternalObjectId()));
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(op.getExecutionContext());
         ExecutionContext ec = op.getExecutionContext();
         try
