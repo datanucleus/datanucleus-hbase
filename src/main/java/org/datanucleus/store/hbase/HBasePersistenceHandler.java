@@ -203,8 +203,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 op.setTransactionalVersion(nextVersion);
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE.debug(Localiser.msg("HBase.Insert.ObjectPersistedWithVersion",
-                        op.getObjectAsPrintable(), op.getInternalObjectId(), "" + nextVersion));
+                    NucleusLogger.DATASTORE.debug(Localiser.msg("HBase.Insert.ObjectPersistedWithVersion", op.getObjectAsPrintable(), op.getInternalObjectId(), "" + nextVersion));
                 }
 
                 if (vermd.getFieldName() != null)
@@ -255,8 +254,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put",
-                    StringUtils.toJVMIDString(op.getObject()), tableName, put.toString(50)));
+                NucleusLogger.DATASTORE_NATIVE.debug(Localiser.msg("HBase.Put", StringUtils.toJVMIDString(op.getObject()), tableName, put.toString(50)));
             }
             htable.put(put);
             if (ec.getStatistics() != null)
@@ -308,8 +306,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     }
                     fieldStr.append(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
                 }
-                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Update.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Update.Start", op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
             }
 
             if (!storeMgr.managesClass(op.getClassMetaData().getFullClassName()))
@@ -513,8 +510,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                                 optimisticExcps = new HashSet<NucleusOptimisticException>();
                             }
                             optimisticExcps.add(new NucleusOptimisticException("Cannot delete object with id " + 
-                                op.getInternalObjectId() + " since has version=" + currentVersion + 
-                                " while datastore has version=" + datastoreVersion));
+                                op.getInternalObjectId() + " since has version=" + currentVersion + " while datastore has version=" + datastoreVersion));
                             deletable = false;
                         }
                     }
@@ -523,7 +519,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         // Invoke any cascade deletion
                         op.loadUnloadedFields();
-                        op.provideFields(cmd.getAllMemberPositions(), new DeleteFieldManager(op));
+                        op.provideFields(cmd.getAllMemberPositions(), new DeleteFieldManager(op, true));
 
                         // Delete the object
                         deletes.add(HBaseUtils.getDeleteForObject(op, table));
@@ -602,7 +598,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             // Invoke any cascade deletion
             op.loadUnloadedFields();
-            op.provideFields(cmd.getAllMemberPositions(), new DeleteFieldManager(op));
+            op.provideFields(cmd.getAllMemberPositions(), new DeleteFieldManager(op, true));
 
             // Delete the object
             Delete delete = HBaseUtils.getDeleteForObject(op, table);
