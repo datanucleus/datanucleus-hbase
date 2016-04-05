@@ -43,6 +43,7 @@ import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaData;
 import org.datanucleus.metadata.MetaDataUtils;
@@ -202,21 +203,31 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
 
                 // Check for null value (currently need all columns to return null)
-                // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
                 boolean isNull = true;
+                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+                if (embmd != null)
+                {
+                    // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
+                }
+                // Fallback null check
                 int[] embAllPosns = embCmd.getAllMemberPositions();
                 for (int i=0;i<embAllPosns.length;i++)
                 {
                     AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(i);
                     List<AbstractMemberMetaData> subEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
                     subEmbMmds.add(embMmd);
-                    Column col = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds).getColumn(0);
-                    String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                    String columnName = HBaseUtils.getQualifierNameForColumn(col);
-                    if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
+                    MemberColumnMapping embMapping = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds);
+                    if (embMapping != null)
                     {
-                        isNull = false;
-                        break;
+                        // This embedded field has a mapping (if this was a nested embedded then would have no mapping)
+                        Column col = embMapping.getColumn(0);
+                        String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                        String columnName = HBaseUtils.getQualifierNameForColumn(col);
+                        if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
+                        {
+                            isNull = false;
+                            break;
+                        }
                     }
                 }
                 if (isNull)
