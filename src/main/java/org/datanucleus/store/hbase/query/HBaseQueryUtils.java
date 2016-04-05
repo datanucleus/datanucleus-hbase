@@ -476,6 +476,7 @@ class HBaseQueryUtils
 
     private static void addColumnsToScanForEmbeddedMember(Scan scan, List<AbstractMemberMetaData> embMmds, Table table, ExecutionContext ec)
     {
+        AbstractMemberMetaData penultimateMmd = (embMmds.size() > 1) ? embMmds.get(embMmds.size()-2) : null;
         AbstractMemberMetaData lastMmd = embMmds.get(embMmds.size()-1);
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(lastMmd.getTypeName(), clr);
@@ -487,18 +488,37 @@ class HBaseQueryUtils
             subEmbMmds.add(embMmd);
             RelationType relationType = embMmd.getRelationType(clr);
             MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(subEmbMmds);
-            if (RelationType.isRelationSingleValued(relationType))
+            if (mapping != null)
             {
-                if (embMmd.getMappedBy() == null) // Avoid infinite recursion with bidir relations
+                if (RelationType.isRelationSingleValued(relationType))
                 {
-                    addColumnsToScanForEmbeddedMember(scan, subEmbMmds, table, ec);
+                    if (penultimateMmd != null && embMmd.getFullFieldName().equals(penultimateMmd.getFullFieldName()))
+                    {
+                    }
+                    else
+                    {
+                        addColumnsToScanForEmbeddedMember(scan, subEmbMmds, table, ec);
+                    }
+                }
+                else
+                {
+                    String familyName = HBaseUtils.getFamilyNameForColumn(mapping.getColumn(0));
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(mapping.getColumn(0));
+                    scan.addColumn(familyName.getBytes(), qualifName.getBytes());
                 }
             }
             else
             {
-                String familyName = HBaseUtils.getFamilyNameForColumn(mapping.getColumn(0));
-                String qualifName = HBaseUtils.getQualifierNameForColumn(mapping.getColumn(0));
-                scan.addColumn(familyName.getBytes(), qualifName.getBytes());
+                if (RelationType.isRelationSingleValued(relationType))
+                {
+                    if (penultimateMmd != null && embMmd.getFullFieldName().equals(penultimateMmd.getFullFieldName()))
+                    {
+                    }
+                    else
+                    {
+                        addColumnsToScanForEmbeddedMember(scan, subEmbMmds, table, ec);
+                    }
+                }
             }
         }
     }
