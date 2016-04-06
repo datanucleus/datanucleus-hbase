@@ -45,7 +45,6 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldRole;
-import org.datanucleus.metadata.MetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
@@ -900,11 +899,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             throw new NucleusDataStoreException(e.getMessage(), e);
                         }
 
-                        TypeConverter elemConv = null;
-                        if (mmd.getElementMetaData() != null && mmd.getElementMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
-                        {
-                            elemConv = ec.getTypeManager().getTypeConverterForName(mmd.getElementMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
-                        }
+                        TypeConverter elemConv = mapping.getTypeConverterForComponent(FieldRole.ROLE_COLLECTION_ELEMENT);
 
                         Collection dbColl = (Collection)value;
                         Iterator dbCollIter = dbColl.iterator();
@@ -934,16 +929,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             throw new NucleusDataStoreException(e.getMessage(), e);
                         }
 
-                        TypeConverter keyConv = null;
-                        if (mmd.getKeyMetaData() != null && mmd.getKeyMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
-                        {
-                            keyConv = ec.getTypeManager().getTypeConverterForName(mmd.getKeyMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
-                        }
-                        TypeConverter valConv = null;
-                        if (mmd.getValueMetaData() != null && mmd.getValueMetaData().hasExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME))
-                        {
-                            valConv = ec.getTypeManager().getTypeConverterForName(mmd.getValueMetaData().getValueForExtension(MetaData.EXTENSION_MEMBER_TYPE_CONVERTER_NAME));
-                        }
+                        TypeConverter keyConv = mapping.getTypeConverterForComponent(FieldRole.ROLE_MAP_KEY);
+                        TypeConverter valConv = mapping.getTypeConverterForComponent(FieldRole.ROLE_MAP_VALUE);
 
                         Map dbMap = (Map)value;
                         Iterator<Map.Entry> dbMapEntryIter = dbMap.entrySet().iterator();
