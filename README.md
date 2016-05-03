@@ -1,6 +1,6 @@
 # datanucleus-hbase
 
-DataNucleus support for persistence to HBase datastores. See [Apache HBase website](http://hbase.apache.org/)
+DataNucleus support for persistence to HBase datastores. See the [Apache HBase website](http://hbase.apache.org/) for details of the datastore.
 
 This is built using Maven, by executing `mvn clean install` which installs the built jar in your local Maven repository.
 
