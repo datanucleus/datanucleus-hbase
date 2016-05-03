@@ -127,7 +127,17 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                     {
                         NucleusLogger.DATASTORE_SCHEMA.debug(Localiser.msg("HBase.SchemaCreate.Class", cmd.getFullClassName(), tableNameString));
                         hTable = new HTableDescriptor(tableName);
-                        populateHTableColumnFamilyNames(hTable, table);
+
+                        Set<String> familyNames = new HashSet<String>();
+                        for (Column col : table.getColumns())
+                        {
+                            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+                            if (familyNames.add(familyName))
+                            {
+                                HColumnDescriptor familyNameCd = new HColumnDescriptor(familyName);
+                                hTable.addFamily(familyNameCd);
+                            }
+                        }
                         hBaseAdmin.createTable(hTable);
                     }
                 }
@@ -208,19 +218,6 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         finally
         {
             mconn.release();
-        }
-    }
-
-    protected void populateHTableColumnFamilyNames(HTableDescriptor hTable, final Table table)
-    {
-        Set<String> familyNames = new HashSet<String>();
-        for (Column col : table.getColumns())
-        {
-            String familyName = HBaseUtils.getFamilyNameForColumn(col);
-            if (familyNames.add(familyName)) {
-                HColumnDescriptor familyNameCd = new HColumnDescriptor(familyName);
-                hTable.addFamily(familyNameCd);
-            }
         }
     }
 
