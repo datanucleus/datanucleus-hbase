@@ -277,6 +277,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
             }
+            else if (RelationType.isRelationMultiValued(relationType))
+            {
+                // TODO Support embedded collection into join table
+                if (value == null)
+                {
+                    
+                }
+            }
 
             // Embedded collection/map/array
             throw new NucleusUserException("Field " + mmd.getFullFieldName() + " specified as embedded but field of this type not suppported. Mark as not persistent? or not embedded?");
