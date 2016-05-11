@@ -135,6 +135,8 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         set.add(StoreManager.OPTION_ORM_EMBEDDED_PC);
         set.add(StoreManager.OPTION_ORM_SERIALISED_PC);
         set.add(StoreManager.OPTION_TXN_ISOLATION_READ_COMMITTED);
+        set.add(StoreManager.OPTION_QUERY_JDOQL_BULK_DELETE);
+        set.add(StoreManager.OPTION_QUERY_JPQL_BULK_DELETE);
         return set;
     }
 
