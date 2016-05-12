@@ -296,6 +296,7 @@ public class HBaseUtils
             for (int i = 0; i < fieldNumbers.length; i++)
             {
                 AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
+                // TODO Support embedded PK
                 MemberColumnMapping mapping = schemaTable.getMemberColumnMappingForMember(mmd);
                 keyObjects[i] = op.provideField(fieldNumbers[i]);
                 if (mapping.getTypeConverter() != null)
