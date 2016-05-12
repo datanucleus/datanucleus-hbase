@@ -25,13 +25,16 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.NucleusContext;
 import org.datanucleus.exceptions.NucleusException;
@@ -39,7 +42,10 @@ import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.FieldPersistenceModifier;
 import org.datanucleus.metadata.IdentityType;
+import org.datanucleus.metadata.MetaDataUtils;
+import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
@@ -291,21 +297,49 @@ public class HBaseUtils
         }
         else if (cmd.getIdentityType() == IdentityType.APPLICATION)
         {
-            final int[] fieldNumbers = cmd.getPKMemberPositions();
-            final Object[] keyObjects = new Object[fieldNumbers.length];
-            for (int i = 0; i < fieldNumbers.length; i++)
+            final int[] pkFieldNums = cmd.getPKMemberPositions();
+            List pkVals = new ArrayList();
+            ExecutionContext ec = op.getExecutionContext();
+            ClassLoaderResolver clr = ec.getClassLoaderResolver();
+            for (int i = 0; i < pkFieldNums.length; i++)
             {
-                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
-                // TODO Support embedded PK
-                MemberColumnMapping mapping = schemaTable.getMemberColumnMappingForMember(mmd);
-                keyObjects[i] = op.provideField(fieldNumbers[i]);
-                if (mapping.getTypeConverter() != null)
+                AbstractMemberMetaData pkMmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNums[i]);
+                RelationType relType = pkMmd.getRelationType(clr);
+                Object fieldVal = op.provideField(pkFieldNums[i]);
+                if (relType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(op.getStoreManager().getMetaDataManager(), clr, pkMmd, relType, null))
                 {
-                    // Lookup using converted value
-                    keyObjects[i] = mapping.getTypeConverter().toDatastoreType(keyObjects[i]);
+                    // Embedded : allow 1 level of embedded field for PK
+                    ObjectProvider embOP = op.getExecutionContext().findObjectProvider(fieldVal);
+                    AbstractClassMetaData embCmd = embOP.getClassMetaData();
+                    int[] memberPositions = embCmd.getAllMemberPositions();
+                    for (int j=0;j<memberPositions.length;j++)
+                    {
+                        AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(memberPositions[j]);
+                        if (embMmd.getPersistenceModifier() != FieldPersistenceModifier.PERSISTENT)
+                        {
+                            // Don't need column if not persistent
+                            continue;
+                        }
+
+                        Object embFieldVal = embOP.provideField(memberPositions[j]);
+                        pkVals.add(embFieldVal); // TODO Cater for field mapped to multiple columns
+                    }
+                }
+                else
+                {
+                    MemberColumnMapping mapping = schemaTable.getMemberColumnMappingForMember(pkMmd);
+                    if (mapping.getTypeConverter() != null)
+                    {
+                        // Lookup using converted value
+                        pkVals.add(mapping.getTypeConverter().toDatastoreType(fieldVal));
+                    }
+                    else
+                    {
+                        pkVals.add(fieldVal);
+                    }
                 }
             }
-            return keyObjects;
+            return pkVals.toArray();
         }
         else
         {
@@ -392,8 +426,7 @@ public class HBaseUtils
                     }
                     else
                     {
-                        // Object serialisation approach. Can't keep that open from the very
-                        // beginning, it messes up the byte stream.
+                        // Object serialisation approach. Can't keep that open from the very beginning, it messes up the byte stream.
                         ObjectOutputStream oos = new ObjectOutputStream(bos);
                         try
                         {
