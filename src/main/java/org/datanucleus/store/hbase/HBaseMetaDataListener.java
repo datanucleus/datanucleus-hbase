@@ -52,15 +52,18 @@ public class HBaseMetaDataListener implements MetaDataListener
         else if (cmd.getIdentityType() == IdentityType.APPLICATION)
         {
             int[] pkFieldNumbers = cmd.getPKMemberPositions();
-            for (int i=0;i<pkFieldNumbers.length;i++)
+            if (pkFieldNumbers != null)
             {
-                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNumbers[i]);
-                if (mmd.getValueStrategy() == IdentityStrategy.IDENTITY)
+                for (int i=0;i<pkFieldNumbers.length;i++)
                 {
-                    // Change to INCREMENT since we don't support IDENTITY
-                    cmd.getIdentityMetaData().setValueStrategy(IdentityStrategy.INCREMENT);
-                    NucleusLogger.METADATA.warn("Field " + mmd.getFullFieldName() +
-                        " has been specified to use IDENTITY value generation, but not supported on HBase. Using INCREMENT");
+                    AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNumbers[i]);
+                    if (mmd.getValueStrategy() == IdentityStrategy.IDENTITY)
+                    {
+                        // Change to INCREMENT since we don't support IDENTITY
+                        cmd.getIdentityMetaData().setValueStrategy(IdentityStrategy.INCREMENT);
+                        NucleusLogger.METADATA.warn("Field " + mmd.getFullFieldName() +
+                            " has been specified to use IDENTITY value generation, but not supported on HBase. Using INCREMENT");
+                    }
                 }
             }
         }
