@@ -265,7 +265,7 @@ class HBaseQueryUtils
         }
 
         final FieldManager fm = new FetchFieldManager(ec, cmd, result, table);
-        Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName()); // Use this as the type of the object. Could be subtype when using users own PK type?
+        Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, fm);
         Object pc = ec.findObject(id, 
             new FieldValues()
