@@ -328,14 +328,21 @@ public class HBaseUtils
                 else
                 {
                     MemberColumnMapping mapping = schemaTable.getMemberColumnMappingForMember(pkMmd);
-                    if (mapping.getTypeConverter() != null)
+                    if (RelationType.isRelationSingleValued(relType))
                     {
-                        // Lookup using converted value
-                        pkVals.add(mapping.getTypeConverter().toDatastoreType(fieldVal));
+                        pkVals.add(IdentityUtils.getPersistableIdentityForId(ec.getApiAdapter().getIdForObject(fieldVal)));
                     }
                     else
                     {
-                        pkVals.add(fieldVal);
+                        if (mapping.getTypeConverter() != null)
+                        {
+                            // Lookup using converted value
+                            pkVals.add(mapping.getTypeConverter().toDatastoreType(fieldVal));
+                        }
+                        else
+                        {
+                            pkVals.add(fieldVal);
+                        }
                     }
                 }
             }
