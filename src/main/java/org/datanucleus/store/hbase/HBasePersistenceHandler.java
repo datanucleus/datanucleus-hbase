@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.ExecutionContext;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
@@ -181,19 +180,11 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
             }
 
-            if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
+            if (ec.getNucleusContext().isClassMultiTenant(cmd))
             {
-                if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
-                {
-                    // Don't bother with multitenancy for this class
-                }
-                else
-                {
-                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
-                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
-                    put.addColumn(familyName.getBytes(), qualifName.getBytes(),
-                        storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID).getBytes());
-                }
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
+                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
+                put.addColumn(familyName.getBytes(), qualifName.getBytes(), ec.getNucleusContext().getMultiTenancyId(ec, cmd).getBytes());
             }
 
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();

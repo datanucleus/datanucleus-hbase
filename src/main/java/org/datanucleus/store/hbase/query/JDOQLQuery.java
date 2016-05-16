@@ -25,7 +25,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.filter.Filter;
 import org.datanucleus.ExecutionContext;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -256,21 +255,14 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
                 HBaseBooleanExpression filterExpr = null;
                 AbstractClassMetaData cmd = getCandidateClassMetaData();
-                if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
+                if (ec.getNucleusContext().isClassMultiTenant(cmd))
                 {
-                    if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
-                    {
-                        // Don't bother with multitenancy for this class
-                    }
-                    else
-                    {
-                        // Add filter on discriminator for this tenant
-                        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
-                        String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
-                        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
-                        String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);
-                        filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
-                    }
+                    // Add filter on discriminator for this tenant
+                    Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
+                    String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
+                    filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                 }
                 if (datastoreCompilation != null && datastoreCompilation.isFilterComplete())
                 {
