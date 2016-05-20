@@ -42,9 +42,9 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldRole;
+import org.datanucleus.metadata.JdbcType;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.query.QueryUtils;
@@ -61,6 +61,7 @@ import org.datanucleus.store.types.converters.MultiColumnConverter;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.store.types.converters.TypeConverterHelper;
 import org.datanucleus.util.NucleusLogger;
+import org.datanucleus.util.TypeConversionHelper;
 
 /**
  * FieldManager to use for retrieving values from HBase to put into a persistable object.
@@ -265,10 +266,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
         if (RelationType.isRelationSingleValued(relationType))
         {
+            // 1-1/N-1 relation
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-            Object value = readObjectField(col, familyName, qualifName, result, mmd);
+            Object value = readObjectField(col, familyName, qualifName, result, mmd, FieldRole.ROLE_FIELD);
+
             if (value == null)
             {
                 return optional ? Optional.empty() : null;
@@ -351,23 +354,21 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
-            if (mmd.isSerialized())
-            {
-                Column col = mapping.getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                Object value = readObjectField(col, familyName, qualifName, result, mmd);
-                Object returnValue = (value == null) ? (optional ? Optional.empty() : null) : (optional ? Optional.of(value) : value);
-                return (op != null && returnValue != null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
-            }
-
+            // 1-N/M-N relation
             Column col = mapping.getColumn(0);
             String familyName = HBaseUtils.getFamilyNameForColumn(col);
             String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-            Object value = readObjectField(col, familyName, qualifName, result, mmd);
+            Object value = readObjectField(col, familyName, qualifName, result, mmd, FieldRole.ROLE_FIELD);
+
             if (value == null)
             {
-                return null;
+                return optional ? Optional.empty() : null;
+            }
+
+            if (mmd.isSerialized())
+            {
+                Object returnValue = optional ? Optional.of(value) : value;
+                return (op != null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
             }
 
             if (mmd.hasCollection())
@@ -478,8 +479,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     if (keyCmd == null)
                     {
                         // Try any listed implementations
-                        String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_MAP_KEY, clr,
-                            ec.getMetaDataManager());
+                        String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_MAP_KEY, clr, ec.getMetaDataManager());
                         if (implNames != null && implNames.length == 1)
                         {
                             keyCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
@@ -498,8 +498,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     if (valCmd == null)
                     {
                         // Try any listed implementations
-                        String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_MAP_VALUE, clr,
-                            ec.getMetaDataManager());
+                        String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, FieldRole.ROLE_MAP_VALUE, clr, ec.getMetaDataManager());
                         if (implNames != null && implNames.length == 1)
                         {
                             valCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
@@ -694,7 +693,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 Column col = mapping.getColumn(0);
                 String familyName = HBaseUtils.getFamilyNameForColumn(col);
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                Object value = readObjectField(col, familyName, qualifName, result, mmd, FieldRole.ROLE_FIELD);
                 if (value == null)
                 {
                     return optional ? Optional.empty() : null;
@@ -865,7 +864,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     Column col = mapping.getColumn(0);
                     String familyName = HBaseUtils.getFamilyNameForColumn(col);
                     String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-                    Object value = readObjectField(col, familyName, qualifName, result, mmd);
+                    Object value = readObjectField(col, familyName, qualifName, result, mmd, FieldRole.ROLE_FIELD);
                     if (value == null)
                     {
                         return optional ? Optional.empty() : null;
@@ -890,14 +889,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     }
                     else if (Enum.class.isAssignableFrom(type))
                     {
-                        ColumnMetaData colmd = col.getColumnMetaData();
-                        if (MetaDataUtils.persistColumnAsNumeric(colmd))
-                        {
-                            return type.getEnumConstants()[((Number)value).intValue()];
-                        }
-
-                        Object myEnum = Enum.valueOf(type, (String)value);
-                        return optional ? Optional.of(myEnum) : myEnum;
+                        returnValue = TypeConversionHelper.getEnumForStoredValue(mmd, FieldRole.ROLE_FIELD, value, clr);
+                        return optional ? Optional.of(returnValue) : returnValue;
                     }
                     else if (mmd.hasCollection())
                     {
@@ -990,7 +983,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
     }
 
-    protected Object readObjectField(Column col, String familyName, String qualifName, Result result, AbstractMemberMetaData mmd)
+    protected Object readObjectField(Column col, String familyName, String qualifName, Result result, AbstractMemberMetaData mmd, FieldRole role)
     {
         byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
         if (bytes == null)
@@ -1038,15 +1031,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
         else if (Enum.class.isAssignableFrom(type))
         {
-            ColumnMetaData colmd = null;
-            if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
-            {
-                colmd = mmd.getColumnMetaData()[0];
-            }
-            if (MetaDataUtils.persistColumnAsNumeric(colmd))
+            JdbcType jdbcType = TypeConversionHelper.getJdbcTypeForEnum(mmd, role, ec.getClassLoaderResolver());
+            if (MetaDataUtils.isJdbcTypeNumeric(jdbcType))
             {
                 return fetchIntInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
             }
+            return fetchStringInternal(bytes, mmd.isSerialized(), HBaseUtils.getDefaultValueForMember(mmd));
         }
         else if (java.util.Date.class.isAssignableFrom(type))
         {

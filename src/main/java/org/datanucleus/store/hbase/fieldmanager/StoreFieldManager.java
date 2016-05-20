@@ -62,6 +62,7 @@ import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
+import org.datanucleus.util.TypeConversionHelper;
 
 /**
  * FieldManager to use for storing values into HBase from a managed persistable object.
@@ -329,6 +330,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
         if (RelationType.isRelationSingleValued(relationType))
         {
+            // 1-1/N-1 relation
             if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
             {
                 if (!ec.getApiAdapter().isDetached(value) && !ec.getApiAdapter().isPersistent(value))
@@ -341,6 +343,10 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     throw new ReachableObjectNotCascadedException(mmd.getFullFieldName(), value);
                 }
             }
+
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
 
             if (mmd.isSerialized())
             {
@@ -357,9 +363,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 }
 
                 // Persist member as serialised
-                Column col = mapping.getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
                 writeObjectField(familyName, qualifName, value);
 
                 if (pcOP != null)
@@ -368,11 +371,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 }
                 return;
             }
-
-            // PC object, so make sure it is persisted
-            Column col = mapping.getColumn(0);
-            String familyName = HBaseUtils.getFamilyNameForColumn(col);
-            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
 
             // Persist identity in the column of this object
             Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
@@ -389,23 +387,20 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
+            // 1-N/M-N relation
+            Column col = mapping.getColumn(0);
+            String familyName = HBaseUtils.getFamilyNameForColumn(col);
+            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
+
             if (mmd.isSerialized())
             {
                 // Persist member as serialised
-                Column col = mapping.getColumn(0);
-                String familyName = HBaseUtils.getFamilyNameForColumn(col);
-                String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-
                 writeObjectField(familyName, qualifName, value);
                 SCOUtils.wrapSCOField(op, fieldNumber, value, true);
                 return;
             }
 
             // Collection/Map/Array
-            Column col = mapping.getColumn(0);
-            String familyName = HBaseUtils.getFamilyNameForColumn(col);
-            String qualifName = HBaseUtils.getQualifierNameForColumn(col);
-
             if (mmd.hasCollection())
             {
                 Collection coll = (Collection)value;
@@ -649,18 +644,14 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
             else if (Enum.class.isAssignableFrom(value.getClass()))
             {
-                ColumnMetaData colmd = null;
-                if (mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
+                Object storedValue = TypeConversionHelper.getStoredValueFromEnum(mmd, FieldRole.ROLE_FIELD, (Enum)value);
+                if (storedValue instanceof Number)
                 {
-                    colmd = mmd.getColumnMetaData()[0];
-                }
-                if (MetaDataUtils.persistColumnAsNumeric(colmd))
-                {
-                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Enum)value).ordinal()));
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Number)storedValue).intValue()));
                 }
                 else
                 {
-                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((Enum)value).name().getBytes());
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((String)storedValue).getBytes());
                 }
                 return;
             }
