@@ -28,9 +28,9 @@ import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.query.evaluator.JDOQLEvaluator;
-import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.query.expression.Expression;
+import org.datanucleus.query.inmemory.JDOQLInMemoryEvaluator;
+import org.datanucleus.query.inmemory.JavaQueryInMemoryEvaluator;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
@@ -294,7 +294,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             }
 
             // Apply any other restrictions not handled in the datastore
-            JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, candidates, compilation, parameters, ec.getClassLoaderResolver());
+            JavaQueryInMemoryEvaluator resultMapper = new JDOQLInMemoryEvaluator(this, candidates, compilation, parameters, ec.getClassLoaderResolver());
             Collection results = resultMapper.execute(filterInMemory, true, true, true, true);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
