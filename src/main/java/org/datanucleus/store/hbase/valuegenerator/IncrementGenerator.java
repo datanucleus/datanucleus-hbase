@@ -99,6 +99,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                 TableName tableName = TableName.valueOf(tableNameString);
                 HBaseStoreManager hbaseMgr = (HBaseStoreManager) storeMgr;
                 Configuration config = hbaseMgr.getHbaseConfig();
+                // TODO Replace with conn.getAdmin()
                 HBaseAdmin admin = new HBaseAdmin(config);
                 try
                 {
@@ -123,6 +124,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                     admin.close();
                 }
 
+                // TODO Replace with conn.getTable()
                 this.table = new HTable(config, this.tableNameString);
                 if (!this.table.exists(new Get(Bytes.toBytes(key))))
                 {
