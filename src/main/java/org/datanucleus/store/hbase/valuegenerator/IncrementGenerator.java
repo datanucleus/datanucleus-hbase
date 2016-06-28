@@ -38,6 +38,7 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.store.hbase.HBaseStoreManager;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
+import org.datanucleus.store.valuegenerator.ValueGenerator;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -73,15 +74,15 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
     public IncrementGenerator(String name, Properties props)
     {
         super(name, props);
-        this.key = properties.getProperty("field-name", name);
-        this.tableNameString = properties.getProperty("sequence-table-name");
+        this.key = properties.getProperty(ValueGenerator.PROPERTY_FIELD_NAME, name);
+        this.tableNameString = properties.getProperty(ValueGenerator.PROPERTY_SEQUENCETABLE_TABLE);
         if (this.tableNameString == null)
         {
             this.tableNameString = "IncrementTable";
         }
-        if (properties.containsKey("key-cache-size"))
+        if (properties.containsKey(ValueGenerator.PROPERTY_KEY_CACHE_SIZE))
         {
-            allocationSize = Integer.valueOf(properties.getProperty("key-cache-size"));
+            allocationSize = Integer.valueOf(properties.getProperty(ValueGenerator.PROPERTY_KEY_CACHE_SIZE));
         }
         else
         {
@@ -129,9 +130,9 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
                 if (!this.table.exists(new Get(Bytes.toBytes(key))))
                 {
                     long initialValue = 0;
-                    if (properties.containsKey("key-initial-value"))
+                    if (properties.containsKey(ValueGenerator.PROPERTY_KEY_INITIAL_VALUE))
                     {
-                        initialValue = Long.valueOf(properties.getProperty("key-initial-value"))-1;
+                        initialValue = Long.valueOf(properties.getProperty(ValueGenerator.PROPERTY_KEY_INITIAL_VALUE))-1;
                     }
                     this.table.put(new Put(Bytes.toBytes(key)).addColumn(Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(initialValue)));
                 }
