@@ -660,7 +660,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), ((String)value).getBytes());
                 return;
             }
-            else if (mmd.hasCollection())
+            else if (Collection.class.isAssignableFrom(value.getClass()))
             {
                 Collection coll = (Collection) value;
                 if (coll.isEmpty())
@@ -697,7 +697,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 SCOUtils.wrapSCOField(op, fieldNumber, value, true);
                 return;
             }
-            else if (mmd.hasMap())
+            else if (Map.class.isAssignableFrom(value.getClass()))
             {
                 Map map = (Map) value;
                 if (map.isEmpty())
@@ -736,7 +736,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 SCOUtils.wrapSCOField(op, fieldNumber, value, true);
                 return;
             }
-            else if (mmd.hasArray())
+            else if (value.getClass().isArray())
             {
                 // TODO Add handling for this
             }

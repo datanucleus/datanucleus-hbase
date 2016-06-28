@@ -892,7 +892,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         returnValue = TypeConversionHelper.getEnumForStoredValue(mmd, FieldRole.ROLE_FIELD, value, clr);
                         return optional ? Optional.of(returnValue) : returnValue;
                     }
-                    else if (mmd.hasCollection())
+                    else if (Collection.class.isAssignableFrom(type))
                     {
                         Collection<Object> coll;
                         try
@@ -922,7 +922,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                         return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), coll, true) : coll;
                     }
-                    else if (mmd.hasMap())
+                    else if (Map.class.isAssignableFrom(type))
                     {
                         Map map;
                         try
@@ -960,7 +960,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                         return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), map, true) : map;          
                     }
-                    else if (mmd.hasArray())
+                    else if (type.isArray())
                     {
                         // TODO Support this
                     }
