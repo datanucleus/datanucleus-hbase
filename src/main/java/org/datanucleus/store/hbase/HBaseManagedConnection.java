@@ -51,7 +51,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     public HBaseManagedConnection(Connection conn)
     {
         this.conn = conn;
-        this.tables = new HashMap<String, Table>();
+        this.tables = new HashMap<>();
         disableExpirationTime();
     }
 
@@ -117,6 +117,8 @@ public class HBaseManagedConnection extends AbstractManagedConnection
                 listener.managedConnectionPostClose();
             }
         }
+
+        super.close();
     }
 
     protected void incrementUseCount()
