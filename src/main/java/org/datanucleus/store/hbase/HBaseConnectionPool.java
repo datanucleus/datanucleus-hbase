@@ -42,8 +42,16 @@ public class HBaseConnectionPool
         connectionForCurrentThread = new ThreadLocal<WeakReference<HBaseManagedConnection>>();
         connections = new CopyOnWriteArrayList<HBaseManagedConnection>();
 
+        // Start evictor thread
         evictorThread = new Timer("HBase Connection Evictor", true);
-        startConnectionEvictorThread(evictorThread);
+        TimerTask timeoutTask = new TimerTask()
+        {
+            public void run()
+            {
+                disposeTimedOutConnections();
+            }
+        };
+        evictorThread.schedule(timeoutTask, timeBetweenEvictionRunsMillis, timeBetweenEvictionRunsMillis);
     }
 
     public void registerConnection(HBaseManagedConnection managedConnection)
@@ -55,7 +63,6 @@ public class HBaseConnectionPool
     public HBaseManagedConnection getPooledConnection()
     {
         WeakReference<HBaseManagedConnection> ref = connectionForCurrentThread.get();
-
         if (ref == null)
         {
             return null;
@@ -92,18 +99,5 @@ public class HBaseConnectionPool
             managedConnection.dispose();
             connections.remove(managedConnection);
         }
-    }
-
-    private void startConnectionEvictorThread(Timer connectionTimeoutThread)
-    {
-        TimerTask timeoutTask = new TimerTask()
-        {
-            public void run()
-            {
-                disposeTimedOutConnections();
-            }
-        };
-
-        evictorThread.schedule(timeoutTask, timeBetweenEvictionRunsMillis, timeBetweenEvictionRunsMillis);
     }
 }
