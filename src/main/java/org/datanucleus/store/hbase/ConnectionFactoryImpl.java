@@ -37,6 +37,10 @@ import org.datanucleus.util.Localiser;
  */
 public class ConnectionFactoryImpl extends AbstractConnectionFactory
 {
+    // TODO These are in RDBMS plugin also, so maybe move to Core plugin at some point
+    public static final String PROPERTY_CONNECTION_POOL_TIME_BETWEEN_EVICTOR_RUNS_MILLIS = "datanucleus.connectionPool.timeBetweenEvictionRunsMillis";
+    public static final String PROPERTY_CONNECTION_POOL_MIN_EVICTABLE_IDLE_TIME_MILLIS = "datanucleus.connectionPool.minEvictableIdleTimeMillis";
+
     private Configuration config;
 
     private HBaseConnectionPool connectionPool;
@@ -53,14 +57,14 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         super(storeMgr, resourceType);
 
         // how often should the evictor run
-        int poolTimeBetweenEvictionRunsMillis = storeMgr.getIntProperty("datanucleus.connectionPool.timeBetweenEvictionRunsMillis");
+        int poolTimeBetweenEvictionRunsMillis = storeMgr.getIntProperty(PROPERTY_CONNECTION_POOL_TIME_BETWEEN_EVICTOR_RUNS_MILLIS);
         if (poolTimeBetweenEvictionRunsMillis == 0)
         {
             poolTimeBetweenEvictionRunsMillis = 15 * 1000; // default, 15 secs
         }
 
         // how long may a connection sit idle in the pool before it may be evicted
-        poolMinEvictableIdleTimeMillis = storeMgr.getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
+        poolMinEvictableIdleTimeMillis = storeMgr.getIntProperty(PROPERTY_CONNECTION_POOL_MIN_EVICTABLE_IDLE_TIME_MILLIS);
         if (poolMinEvictableIdleTimeMillis == 0)
         {
             poolMinEvictableIdleTimeMillis = 30 * 1000; // default, 30 secs
@@ -97,8 +101,9 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             config.set("hbase.master", serverName + ":" + portName);
         }
 
-        int maxSize = storeMgr.getIntProperty(HBaseStoreManager.PROPERTY_HBASE_TABLE_POOL_MAXSIZE);
-        maxSize = maxSize > 0 ? maxSize : Integer.MAX_VALUE;
+// Old code from HBase 0.9.x when we had HTablePool
+//        int maxSize = storeMgr.getIntProperty(HBaseStoreManager.PROPERTY_HBASE_TABLE_POOL_MAXSIZE);
+//        maxSize = maxSize > 0 ? maxSize : Integer.MAX_VALUE;
     }
 
     /**
@@ -122,11 +127,11 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             }
             catch (ZooKeeperConnectionException e)
             {
-                throw new NucleusDataStoreException("Exception thrown obtaining HConnection", e);
+                throw new NucleusDataStoreException("Exception thrown obtaining HBase Connection", e);
             }
             catch (IOException e)
             {
-                throw new NucleusDataStoreException("Exception thrown obtaining HConnection", e);
+                throw new NucleusDataStoreException("Exception thrown obtaining HBase Connection", e);
             }
         }
         return managedConnection;
