@@ -258,6 +258,10 @@ class HBaseQueryUtils
             {
                 return null;
             }
+            else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.ENTITY_NAME && !cmd.getEntityName().equals(discValue))
+            {
+                return null;
+            }
             else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.VALUE_MAP && !cmd.getDiscriminatorValue().equals(discValue))
             {
                 return null;
@@ -323,6 +327,10 @@ class HBaseQueryUtils
             String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME && !cmd.getFullClassName().equals(discValue))
+            {
+                return null;
+            }
+            else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.ENTITY_NAME && !cmd.getEntityName().equals(discValue))
             {
                 return null;
             }
@@ -415,6 +423,10 @@ class HBaseQueryUtils
             String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME && !cmd.getFullClassName().equals(discValue))
+            {
+                return null;
+            }
+            else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.ENTITY_NAME && !cmd.getEntityName().equals(discValue))
             {
                 return null;
             }

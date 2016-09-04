@@ -42,7 +42,6 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.DiscriminatorMetaData;
 import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.FieldPersistenceModifier;
 import org.datanucleus.metadata.IdentityType;
@@ -164,16 +163,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (cmd.hasDiscriminatorStrategy())
             {
                 // Add discriminator field
-                DiscriminatorMetaData discmd = cmd.getDiscriminatorMetaData();
-                String discVal = null;
-                if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
-                {
-                    discVal = cmd.getFullClassName();
-                }
-                else
-                {
-                    discVal = discmd.getValue();
-                }
+                String discVal = (String)cmd.getDiscriminatorValue(); // TODO Allow non-String
                 String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
                 String qualifName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
 
@@ -670,6 +660,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
                 Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
                 if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME && !cmd.getFullClassName().equals(discValue))
+                {
+                    throw new NucleusObjectNotFoundException();
+                }
+                else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.ENTITY_NAME && !cmd.getEntityName().equals(discValue))
                 {
                     throw new NucleusObjectNotFoundException();
                 }
