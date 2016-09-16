@@ -390,7 +390,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     throw new NucleusException("Don't currently support serialized collection elements (field=" + mmd.getFullFieldName() + ")");
                 }
 
-                AbstractClassMetaData elemCmd = mmd.getCollection().getElementClassMetaData(clr, ec.getMetaDataManager());
+                AbstractClassMetaData elemCmd = mmd.getCollection().getElementClassMetaData(clr);
                 if (elemCmd == null)
                 {
                     // Try any listed implementations
@@ -475,7 +475,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 AbstractClassMetaData keyCmd = null;
                 if (mmd.getMap().keyIsPersistent())
                 {
-                    keyCmd = mmd.getMap().getKeyClassMetaData(clr, ec.getMetaDataManager());
+                    keyCmd = mmd.getMap().getKeyClassMetaData(clr);
                     if (keyCmd == null)
                     {
                         // Try any listed implementations
@@ -494,7 +494,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 AbstractClassMetaData valCmd = null;
                 if (mmd.getMap().valueIsPersistent())
                 {
-                    valCmd = mmd.getMap().getValueClassMetaData(clr, ec.getMetaDataManager());
+                    valCmd = mmd.getMap().getValueClassMetaData(clr);
                     if (valCmd == null)
                     {
                         // Try any listed implementations
@@ -611,7 +611,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     throw new NucleusException("Don't currently support serialized array elements (field=" + mmd.getFullFieldName() + ")");
                 }
 
-                AbstractClassMetaData elemCmd = mmd.getArray().getElementClassMetaData(clr, ec.getMetaDataManager());
+                AbstractClassMetaData elemCmd = mmd.getArray().getElementClassMetaData(clr);
                 if (elemCmd == null)
                 {
                     // Try any listed implementations
