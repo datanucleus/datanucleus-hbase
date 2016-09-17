@@ -18,8 +18,10 @@ Contributors:
 package org.datanucleus.store.hbase.metadata;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -27,7 +29,6 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.metadata.ExtensionMetaData;
 import org.datanucleus.util.NucleusLogger;
 
 /**
@@ -48,16 +49,18 @@ public class MetaDataExtensionParser
 
     public MetaDataExtensionParser(AbstractClassMetaData acmd)
     {
-        ExtensionMetaData[] eMetaData = acmd.getExtensions();
+        Map<String, String> eMetaData = acmd.getExtensions();
         if (eMetaData == null)
         {
             // nothing to do.
             return;
         }
-        for (ExtensionMetaData anEMetaData : eMetaData)
+        Iterator<Entry<String, String>> entryIter = eMetaData.entrySet().iterator();
+        while (entryIter.hasNext())
         {
-            String key = anEMetaData.getKey();
-            String value = anEMetaData.getValue();
+            Entry<String, String> entry = entryIter.next();
+            String key = entry.getKey();
+            String value = entry.getValue();
             if (value == null || value.length() == 0)
             {
                 // no value -> add log
@@ -67,7 +70,7 @@ public class MetaDataExtensionParser
             {
                 if (NucleusLogger.METADATA.isDebugEnabled())
                 {
-                    NucleusLogger.METADATA.debug("Found HBase extension: " + anEMetaData);
+                    NucleusLogger.METADATA.debug("Found HBase extension: key=" + key + " value=" + value);
                 }
                 int nextDot = key.indexOf(".", BASE.length());
                 if (nextDot != -1)
