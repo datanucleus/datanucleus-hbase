@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.FileMetaData;
-import org.datanucleus.metadata.MetaData;
 import org.datanucleus.store.hbase.metadata.MetaDataExtensionParser;
 import org.datanucleus.store.hbase.metadata.MetaDataExtension;
 
@@ -47,13 +46,13 @@ public class MetaDataExtensionParserTest extends TestCase
     public void testValidExtensions()
     {
         AbstractClassMetaData acmd = getPersistenceClass();
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.BLOOM_FILTER.name(), "ROW");
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.COMPRESSION.name(), "LZO");
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.IN_MEMORY.name(), "true");
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.KEEP_DELETED_CELLS.name(), "true");
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.BLOCK_CACHE_ENABLED.name(), "false");
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.MAX_VERSIONS.name(), "5");
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.TIME_TO_LIVE.name(), "500");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.BLOOM_FILTER.name(), "ROW");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.COMPRESSION.name(), "LZO");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.IN_MEMORY.name(), "true");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.KEEP_DELETED_CELLS.name(), "true");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.BLOCK_CACHE_ENABLED.name(), "false");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.MAX_VERSIONS.name(), "5");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.TIME_TO_LIVE.name(), "500");
 
         MetaDataExtensionParser ep = new MetaDataExtensionParser(acmd);
 
@@ -75,7 +74,7 @@ public class MetaDataExtensionParserTest extends TestCase
     public void testInvalidFamilyName()
     {
         AbstractClassMetaData acmd = getPersistenceClass();
-        acmd.addExtension(MetaData.VENDOR_NAME, TEST_BASE + MetaDataExtension.BLOOM_FILTER.name(), "ROW");
+        acmd.addExtension(TEST_BASE + MetaDataExtension.BLOOM_FILTER.name(), "ROW");
         MetaDataExtensionParser ep = new MetaDataExtensionParser(acmd);
 
         @SuppressWarnings("deprecation")
