@@ -39,6 +39,7 @@ import org.datanucleus.store.hbase.metadata.MetaDataExtensionParser;
 import org.datanucleus.store.schema.AbstractStoreSchemaHandler;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.CompleteClassTable;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
@@ -160,33 +161,33 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                         modified = true;
                     }
                 }
-                if (table.getDatastoreIdColumn() != null)
+                if (table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID) != null)
                 {
-                    boolean changed = addColumnFamilyForColumn(table.getDatastoreIdColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    boolean changed = addColumnFamilyForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID), hTable, tableNameString, familyNames, validateOnly);
                     if (changed)
                     {
                         modified = true;
                     }
                 }
-                if (table.getVersionColumn() != null)
+                if (table.getSurrogateColumn(SurrogateColumnType.VERSION) != null)
                 {
-                    boolean changed = addColumnFamilyForColumn(table.getVersionColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    boolean changed = addColumnFamilyForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION), hTable, tableNameString, familyNames, validateOnly);
                     if (changed)
                     {
                         modified = true;
                     }
                 }
-                if (table.getDiscriminatorColumn() != null)
+                if (table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR) != null)
                 {
-                    boolean changed = addColumnFamilyForColumn(table.getDiscriminatorColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    boolean changed = addColumnFamilyForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR), hTable, tableNameString, familyNames, validateOnly);
                     if (changed)
                     {
                         modified = true;
                     }
                 }
-                if (table.getMultitenancyColumn() != null)
+                if (table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY) != null)
                 {
-                    boolean changed = addColumnFamilyForColumn(table.getMultitenancyColumn(), hTable, tableNameString, familyNames, validateOnly);
+                    boolean changed = addColumnFamilyForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY), hTable, tableNameString, familyNames, validateOnly);
                     if (changed)
                     {
                         modified = true;

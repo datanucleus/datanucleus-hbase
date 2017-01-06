@@ -53,6 +53,7 @@ import org.datanucleus.store.VersionHelper;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.StoreFieldManager;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
@@ -141,8 +142,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                String familyName = HBaseUtils.getFamilyNameForColumn(table.getDatastoreIdColumn());
-                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getDatastoreIdColumn());
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID));
+                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID));
                 Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId());
                 try
                 {
@@ -164,16 +165,16 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 // Add discriminator field
                 String discVal = (String)cmd.getDiscriminatorValue(); // TODO Allow non-String
-                String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
-                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
+                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
 
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
             }
 
             if (ec.getNucleusContext().isClassMultiTenant(cmd))
             {
-                String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
-                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
+                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), ec.getNucleusContext().getMultiTenancyId(ec, cmd).getBytes());
             }
 
@@ -201,8 +202,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Surrogate version, so add to the put
-                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn());
-                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION));
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION));
                     if (nextVersion instanceof Long)
                     {
                         put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
@@ -340,8 +341,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Update the stored surrogate value
-                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn());
-                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION));
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION));
                     if (nextVersion instanceof Long)
                     {
                         put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes((Long)nextVersion));
@@ -656,8 +657,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
             else if (cmd.hasDiscriminatorStrategy())
             {
-                String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
-                String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
+                String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
+                String columnName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
                 Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
                 Object cmdDiscValue = cmd.getDiscriminatorValue();
                 if (cmd.getDiscriminatorStrategy() != DiscriminatorStrategy.NONE && !cmdDiscValue.equals(discValue))

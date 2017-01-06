@@ -36,6 +36,7 @@ import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.query.expression.HBaseBooleanExpression;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.store.query.QueryManager;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
@@ -260,8 +261,8 @@ public class JPQLQuery extends AbstractJPQLQuery
                 {
                     // Add filter on discriminator for this tenant
                     Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
-                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getMultitenancyColumn());
-                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getMultitenancyColumn());
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                     String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
                     filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                 }

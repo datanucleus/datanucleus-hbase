@@ -54,6 +54,7 @@ import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.NucleusLogger;
 
@@ -169,22 +170,22 @@ class HBaseQueryUtils
                     if (cmd.isVersioned() && vermd.getFieldName() == null)
                     {
                         // Add version column
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn()).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn()).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
                         scan.addColumn(familyName, qualifName);
                     }
                     if (cmd.hasDiscriminatorStrategy())
                     {
                         // Add discriminator column
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn()).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn()).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR)).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR)).getBytes();
                         scan.addColumn(familyName, qualifName);
                     }
                     if (cmd.getIdentityType() == IdentityType.DATASTORE)
                     {
                         // Add datastore identity column
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getDatastoreIdColumn()).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getDatastoreIdColumn()).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID)).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID)).getBytes();
                         scan.addColumn(familyName, qualifName);
                     }
 
@@ -251,8 +252,8 @@ class HBaseQueryUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
-            String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
+            String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
+            String columnName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             Object cmdDiscValue = cmd.getDiscriminatorValue();
             if (cmd.getDiscriminatorStrategy() != DiscriminatorStrategy.NONE && !cmdDiscValue.equals(discValue))
@@ -316,8 +317,8 @@ class HBaseQueryUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
-            String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
+            String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
+            String columnName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             Object cmdDiscValue = cmd.getDiscriminatorValue();
             if (cmd.getDiscriminatorStrategy() != DiscriminatorStrategy.NONE && !cmdDiscValue.equals(discValue))
@@ -326,8 +327,8 @@ class HBaseQueryUtils
             }
         }
 
-        String dsidFamilyName = HBaseUtils.getFamilyNameForColumn(table.getDatastoreIdColumn());
-        String dsidColumnName = HBaseUtils.getQualifierNameForColumn(table.getDatastoreIdColumn());
+        String dsidFamilyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID));
+        String dsidColumnName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID));
         Object id = null;
         try
         {
@@ -405,8 +406,8 @@ class HBaseQueryUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             // Check the class for this discriminator value
-            String familyName = HBaseUtils.getFamilyNameForColumn(table.getDiscriminatorColumn());
-            String columnName = HBaseUtils.getQualifierNameForColumn(table.getDiscriminatorColumn());
+            String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
+            String columnName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
             Object discValue = new String(result.getValue(familyName.getBytes(), columnName.getBytes()));
             Object cmdDiscValue = cmd.getDiscriminatorValue();
             if (cmd.getDiscriminatorStrategy() != DiscriminatorStrategy.NONE && !cmdDiscValue.equals(discValue))

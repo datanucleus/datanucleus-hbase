@@ -52,6 +52,7 @@ import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.converters.TypeConverter;
 
@@ -197,8 +198,8 @@ public class HBaseUtils
         Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
         VersionMetaData vermd = cmd.getVersionMetaDataForClass();
 
-        String familyName = HBaseUtils.getFamilyNameForColumn(table.getVersionColumn());
-        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getVersionColumn());
+        String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION));
+        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION));
         Object version = null;
         try
         {
