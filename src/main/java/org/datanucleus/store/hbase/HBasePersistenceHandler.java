@@ -180,7 +180,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd != null)
             {
-                Object nextVersion = ec.getNextVersion(vermd.getVersionStrategy(), null);
+                Object nextVersion = ec.getNextVersion(vermd, null);
                 op.setTransactionalVersion(nextVersion);
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
@@ -314,7 +314,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (vermd != null)
             {
                 // Version object so calculate version to store with
-                Object nextVersion = ec.getNextVersion(vermd.getVersionStrategy(), op.getTransactionalVersion());
+                Object nextVersion = ec.getNextVersion(vermd, op.getTransactionalVersion());
                 op.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
