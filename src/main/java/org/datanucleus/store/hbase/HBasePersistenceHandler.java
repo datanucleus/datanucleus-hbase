@@ -49,7 +49,6 @@ import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.VersionHelper;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.StoreFieldManager;
@@ -181,7 +180,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd != null)
             {
-                Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), null);
+                Object nextVersion = ec.getNextVersion(vermd.getVersionStrategy(), null);
                 op.setTransactionalVersion(nextVersion);
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
@@ -304,7 +303,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 // Optimistic checking of version
                 Result result = HBaseUtils.getResultForObject(op, htable, table);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
-                VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
+                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+                ec.performVersionCheck(op, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
             }
 
             int[] updatedFieldNums = fieldNumbers;
@@ -314,7 +314,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (vermd != null)
             {
                 // Version object so calculate version to store with
-                Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), op.getTransactionalVersion());
+                Object nextVersion = ec.getNextVersion(vermd.getVersionStrategy(), op.getTransactionalVersion());
                 op.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
@@ -575,7 +575,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 // Optimistic checking of version
                 Result result = HBaseUtils.getResultForObject(op, htable, table);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
-                VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
+                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+                ec.performVersionCheck(op, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
             }
 
             // Invoke any cascade deletion
