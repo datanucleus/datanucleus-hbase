@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
+import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.exceptions.ReachableObjectNotCascadedException;
@@ -50,6 +51,7 @@ import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.AbstractStoreFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseStoreManager;
@@ -328,6 +330,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             return;
         }
 
+        String relationStorageMode = ec.getStoreManager().getStringProperty(PropertyNames.PROPERTY_RELATION_IDENTITY_STORAGE_MODE);
         if (RelationType.isRelationSingleValued(relationType))
         {
             // 1-1/N-1 relation
@@ -375,14 +378,19 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             // Persist identity in the column of this object
             Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
             Object valueID = ec.getApiAdapter().getIdForObject(valuePC);
-            if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+
+            if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
             {
                 writeObjectField(familyName, qualifName, IdentityUtils.getPersistableIdentityForId(valueID));
             }
-            else
+            else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
             {
                 // Legacy
                 writeObjectField(familyName, qualifName, valueID);
+            }
+            else
+            {
+                throw new NucleusUserException("This store plugin does not support relation identity storageMode of " + relationStorageMode);
             }
         }
         else if (RelationType.isRelationMultiValued(relationType))
@@ -432,11 +440,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     {
                         Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
                         Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             collIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
                         }
-                        else
+                        else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                         {
                             // Legacy
                             collIds.add(elementID);
@@ -444,11 +452,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     }
                     else
                     {
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             collIds.add("NULL");
                         }
-                        else
+                        else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                         {
                             collIds.addAll(null);
                         }
@@ -479,7 +487,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     {
                         Object pKey = ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
                         mapKey = ec.getApiAdapter().getIdForObject(pKey);
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             mapKey = IdentityUtils.getPersistableIdentityForId(mapKey);
                         }
@@ -490,7 +498,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         {
                             Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
                             mapValue = ec.getApiAdapter().getIdForObject(pVal);
-                            if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                            if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                             {
                                 mapValue = IdentityUtils.getPersistableIdentityForId(mapValue);
                             }
@@ -527,22 +535,22 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     {
                         Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
                         Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             arrIds.add(IdentityUtils.getPersistableIdentityForId(elementID));
                         }
-                        else
+                        else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                         {
                             arrIds.add(elementID);
                         }
                     }
                     else
                     {
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             arrIds.add("NULL");
                         }
-                        else
+                        else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                         {
                             arrIds.add(null);
                         }

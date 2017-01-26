@@ -54,7 +54,8 @@ import org.datanucleus.util.Localiser;
  */
 public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwareStoreManager
 {
-    public static final String PROPERTY_HBASE_RELATION_USE_PERSISTABLEID = "datanucleus.hbase.relationUsesPersistableId";
+    public static final String RELATION_IDENTITY_STORAGE_HBASE_LEGACY = "HBaseLegacy";
+
     public static final String PROPERTY_HBASE_ENFORCE_UNIQUENESS_IN_APPLICATION = "datanucleus.hbase.enforceUniquenessInApplication";
     public static final String PROPERTY_HBASE_SERIALISED_PK = "datanucleus.hbase.serialisedPK";
     public static final String PROPERTY_HBASE_TABLE_POOL_MAXSIZE = "datanucleus.hbase.tablePoolMaxSize";

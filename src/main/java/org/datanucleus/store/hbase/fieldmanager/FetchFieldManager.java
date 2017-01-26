@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
+import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
@@ -49,6 +50,7 @@ import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.query.QueryUtils;
 import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseStoreManager;
@@ -263,6 +265,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             optional = true;
         }
 
+        String relationStorageMode = ec.getStoreManager().getStringProperty(PropertyNames.PROPERTY_RELATION_IDENTITY_STORAGE_MODE);
         if (RelationType.isRelationSingleValued(relationType))
         {
             // 1-1/N-1 relation
@@ -289,7 +292,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
             // The stored value was the identity
             Object pc = null;
-            if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+            if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
             {
                 String persistableId = (String) value;
                 try
@@ -344,10 +347,14 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     NucleusLogger.PERSISTENCE.warn("Object=" + op + " field=" + mmd.getFullFieldName() + " has id=" + persistableId + " but could not instantiate object with that identity");
                 }
             }
-            else
+            else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
             {
                 // Legacy TODO Remove this
                 pc = ec.findObject(value, true, true, null);
+            }
+            else
+            {
+                throw new NucleusUserException("This store plugin does not support relation identity storageMode of " + relationStorageMode);
             }
             return optional ? (pc != null ? Optional.of(pc) : Optional.empty()) : pc;
         }
@@ -412,7 +419,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 while (idIter.hasNext())
                 {
                     Object elementId = idIter.next();
-                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                     {
                         String persistableId = (String)elementId;
                         if (persistableId.equals("NULL"))
@@ -433,7 +440,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             }
                         }
                     }
-                    else
+                    else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                     {
                         coll.add(ec.findObject(elementId, true, true, null));
                     }
@@ -533,7 +540,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     if (mmd.getMap().keyIsPersistent())
                     {
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             String keyPersistableId = (String)mapKey;
                             try
@@ -547,7 +554,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                                 keySet = false;
                             }
                         }
-                        else
+                        else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                         {
                             // Legacy "id"
                             mapKey = ec.findObject(mapKey, true, true, null);
@@ -556,7 +563,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     if (mmd.getMap().valueIsPersistent())
                     {
-                        if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                        if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
                             // TODO Support serialised value which will be of type ByteBuffer
                             String valPersistableId = (String)mapValue;
@@ -578,7 +585,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                                 }
                             }
                         }
-                        else
+                        else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                         {
                             // Legacy "id"
                             mapValue = ec.findObject(mapValue, true, true, null);
@@ -634,7 +641,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 while (idIter.hasNext())
                 {
                     Object elementId = idIter.next();
-                    if (ec.getStoreManager().getBooleanProperty(HBaseStoreManager.PROPERTY_HBASE_RELATION_USE_PERSISTABLEID))
+                    if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                     {
                         String persistableId = (String)elementId;
                         
@@ -656,7 +663,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             }
                         }
                     }
-                    else
+                    else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
                     {
                         // Legacy TODO Remove this
                         Array.set(array, pos, ec.findObject(elementId, true, true, null));
