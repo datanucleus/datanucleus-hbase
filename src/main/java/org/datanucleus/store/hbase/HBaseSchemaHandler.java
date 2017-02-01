@@ -193,6 +193,14 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
                         modified = true;
                     }
                 }
+                if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+                {
+                    boolean changed = addColumnFamilyForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE), hTable, tableNameString, familyNames, validateOnly);
+                    if (changed)
+                    {
+                        modified = true;
+                    }
+                }
 
                 // Process any extensions
                 MetaDataExtensionParser ep = new MetaDataExtensionParser(cmd);

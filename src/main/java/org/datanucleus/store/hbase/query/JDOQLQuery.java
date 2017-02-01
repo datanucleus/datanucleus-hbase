@@ -256,15 +256,34 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
                 HBaseBooleanExpression filterExpr = null;
                 AbstractClassMetaData cmd = getCandidateClassMetaData();
+                Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+
                 if (ec.getNucleusContext().isClassMultiTenant(cmd))
                 {
-                    // Add filter on discriminator for this tenant
-                    Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+                    // Filter on discriminator for this tenant
                     String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                     String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                     String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
-                    filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
+                    HBaseBooleanExpression multitenantFilterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
+                    filterExpr = multitenantFilterExpr;
                 }
+
+                if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+                {
+                    // Filter on soft-delete flag
+                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
+                    HBaseBooleanExpression softDeleteFilterExpr = new HBaseBooleanExpression(familyName, qualifName, Boolean.FALSE, Expression.OP_EQ);
+                    if (filterExpr != null)
+                    {
+                        filterExpr = new HBaseBooleanExpression(filterExpr, softDeleteFilterExpr, Expression.OP_AND);
+                    }
+                    else
+                    {
+                        filterExpr = softDeleteFilterExpr;
+                    }
+                }
+
                 if (datastoreCompilation != null && datastoreCompilation.isFilterComplete())
                 {
                     HBaseBooleanExpression userFilterExpr = datastoreCompilation.getFilterExpression();

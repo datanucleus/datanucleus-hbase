@@ -52,6 +52,7 @@ import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.StoreFieldManager;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
@@ -162,7 +163,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (cmd.hasDiscriminatorStrategy())
             {
-                // Add discriminator field
+                // Discriminator field
                 String discVal = (String)cmd.getDiscriminatorValue(); // TODO Allow non-String
                 String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
                 String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR));
@@ -172,9 +173,19 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             if (ec.getNucleusContext().isClassMultiTenant(cmd))
             {
+                // Multi-tenancy discriminator
                 String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                 String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), ec.getNucleusContext().getMultiTenancyId(ec, cmd).getBytes());
+            }
+
+            Column softDeleteCol = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE);
+            if (softDeleteCol != null)
+            {
+                // Soft-delete flag
+                String familyName = HBaseUtils.getFamilyNameForColumn(softDeleteCol);
+                String qualifName = HBaseUtils.getQualifierNameForColumn(softDeleteCol);
+                put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(Boolean.FALSE));
             }
 
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
