@@ -281,26 +281,29 @@ class HBaseQueryUtils
                     return null;
                 }
             }, type, ignoreCache, false);
+        ObjectProvider op = ec.findObjectProvider(pc);
 
         if (cmd.isVersioned())
         {
             // Set the version on the object
-            ObjectProvider sm = ec.findObjectProvider(pc);
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd.getFieldName() != null)
             {
                 // Set the version from the field value
                 AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+                version = op.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else
             {
                 // Get the surrogate version from the datastore
                 version = HBaseUtils.getSurrogateVersionForObject(cmd, result, tableName, storeMgr);
             }
-            sm.setVersion(version);
+            op.setVersion(version);
         }
+
+        // Any fields loaded above will not be wrapped since we did not have the ObjectProvider at the point of creating the FetchFieldManager, so wrap them now
+        op.replaceAllLoadedSCOFieldsWithWrappers();
 
         if (result.getRow() != null)
         {
@@ -370,11 +373,11 @@ class HBaseQueryUtils
                     return null;
                 }
             }, null, ignoreCache, false);
+        ObjectProvider op = ec.findObjectProvider(pc);
 
         if (cmd.isVersioned())
         {
             // Set the version on the object
-            ObjectProvider op = ec.findObjectProvider(pc);
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd.getFieldName() != null)
@@ -390,6 +393,9 @@ class HBaseQueryUtils
             }
             op.setVersion(version);
         }
+
+        // Any fields loaded above will not be wrapped since we did not have the ObjectProvider at the point of creating the FetchFieldManager, so wrap them now
+        op.replaceAllLoadedSCOFieldsWithWrappers();
 
         if (result.getRow() != null)
         {
