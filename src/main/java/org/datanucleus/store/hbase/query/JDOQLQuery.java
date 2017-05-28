@@ -31,6 +31,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.expression.Expression;
 import org.datanucleus.query.inmemory.JDOQLInMemoryEvaluator;
 import org.datanucleus.query.inmemory.JavaQueryInMemoryEvaluator;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
@@ -256,31 +257,39 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
                 HBaseBooleanExpression filterExpr = null;
                 AbstractClassMetaData cmd = getCandidateClassMetaData();
-                Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
 
-                if (ec.getNucleusContext().isClassMultiTenant(cmd))
+                StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+                Table table = null;
+                if (sd != null)
                 {
-                    // Filter on discriminator for this tenant
-                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
-                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
-                    String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
-                    HBaseBooleanExpression multitenantFilterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
-                    filterExpr = multitenantFilterExpr;
-                }
+                    table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+                    if (table != null)
+                    {
+                        if (ec.getNucleusContext().isClassMultiTenant(cmd))
+                        {
+                            // Filter on discriminator for this tenant
+                            String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
+                            String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
+                            String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
+                            HBaseBooleanExpression multitenantFilterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
+                            filterExpr = multitenantFilterExpr;
+                        }
 
-                if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
-                {
-                    // Filter on soft-delete flag
-                    String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
-                    String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
-                    HBaseBooleanExpression softDeleteFilterExpr = new HBaseBooleanExpression(familyName, qualifName, Boolean.FALSE, Expression.OP_EQ);
-                    if (filterExpr != null)
-                    {
-                        filterExpr = new HBaseBooleanExpression(filterExpr, softDeleteFilterExpr, Expression.OP_AND);
-                    }
-                    else
-                    {
-                        filterExpr = softDeleteFilterExpr;
+                        if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+                        {
+                            // Filter on soft-delete flag
+                            String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
+                            String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
+                            HBaseBooleanExpression softDeleteFilterExpr = new HBaseBooleanExpression(familyName, qualifName, Boolean.FALSE, Expression.OP_EQ);
+                            if (filterExpr != null)
+                            {
+                                filterExpr = new HBaseBooleanExpression(filterExpr, softDeleteFilterExpr, Expression.OP_AND);
+                            }
+                            else
+                            {
+                                filterExpr = softDeleteFilterExpr;
+                            }
+                        }
                     }
                 }
 
