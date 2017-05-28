@@ -191,7 +191,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd != null)
             {
-                Object nextVersion = ec.getNextVersion(vermd, null);
+                Object nextVersion = ec.getLockManager().getNextVersion(vermd, null);
                 op.setTransactionalVersion(nextVersion);
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
@@ -315,7 +315,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 Result result = HBaseUtils.getResultForObject(op, htable, table);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                ec.performVersionCheck(op, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
+                ec.getLockManager().performOptimisticVersionCheck(op, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
             }
 
             int[] updatedFieldNums = fieldNumbers;
@@ -325,7 +325,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (vermd != null)
             {
                 // Version object so calculate version to store with
-                Object nextVersion = ec.getNextVersion(vermd, op.getTransactionalVersion());
+                Object nextVersion = ec.getLockManager().getNextVersion(vermd, op.getTransactionalVersion());
                 op.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
@@ -587,7 +587,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 Result result = HBaseUtils.getResultForObject(op, htable, table);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                ec.performVersionCheck(op, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
+                ec.getLockManager().performOptimisticVersionCheck(op, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
             }
 
             // Invoke any cascade deletion
