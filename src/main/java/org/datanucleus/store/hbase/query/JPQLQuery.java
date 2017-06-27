@@ -48,6 +48,7 @@ import org.datanucleus.util.NucleusLogger;
 public class JPQLQuery extends AbstractJPQLQuery
 {
     private static final long serialVersionUID = -747445217646824746L;
+
     /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient HBaseQueryCompilation datastoreCompilation;
 
@@ -315,7 +316,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                 }
 
                 candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses, ignoreCache, getFetchPlan(), filter, storeMgr);
-                if (filter != null && datastoreCompilation.isFilterComplete())
+                if (filter != null && datastoreCompilation != null && datastoreCompilation.isFilterComplete())
                 {
                     filterInMemory = false;
                 }

@@ -49,6 +49,7 @@ import org.datanucleus.util.NucleusLogger;
 public class JDOQLQuery extends AbstractJDOQLQuery
 {
     private static final long serialVersionUID = 8872448483387918589L;
+
     /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient HBaseQueryCompilation datastoreCompilation;
 
@@ -316,7 +317,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 }
 
                 candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses, ignoreCache, getFetchPlan(), filter, storeMgr);
-                if (filter != null && datastoreCompilation.isFilterComplete())
+                if (filter != null && datastoreCompilation != null && datastoreCompilation.isFilterComplete())
                 {
                     filterInMemory = false;
                 }
