@@ -48,6 +48,7 @@ import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.AbstractPersistenceHandler;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
@@ -96,11 +97,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
         ExecutionContext ec = op.getExecutionContext();
         AbstractClassMetaData cmd = op.getClassMetaData();
-        if (!storeMgr.managesClass(op.getClassMetaData().getFullClassName()))
+        StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
         {
-            storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), op.getClassMetaData().getFullClassName());
+            storeMgr.manageClasses(ec.getClassLoaderResolver(), new String[]{cmd.getFullClassName()});
+            sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         }
-        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        Table table = sd.getTable();
 
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(ec);
         try
@@ -301,11 +304,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Update.Start", op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
             }
 
-            if (!storeMgr.managesClass(op.getClassMetaData().getFullClassName()))
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
             {
-                storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), op.getClassMetaData().getFullClassName());
+                storeMgr.manageClasses(ec.getClassLoaderResolver(), new String[]{cmd.getFullClassName()});
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             }
-            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            Table table = sd.getTable();
 
             String tableName = table.getName();
             org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
@@ -455,7 +460,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         for (int i=0;i<ops.length;i++)
         {
             AbstractClassMetaData cmd = ops[i].getClassMetaData();
-            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
+            {
+                storeMgr.manageClasses(ec.getClassLoaderResolver(), new String[]{cmd.getFullClassName()});
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            }
+            Table table = sd.getTable();
             String tableName = table.getName();
             Set<ObjectProvider> opsForTable = opsByTable.get(tableName);
             if (opsForTable == null)
@@ -476,7 +487,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 long startTime = System.currentTimeMillis();
                 org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
-                Table table = ec.getStoreManager().getStoreDataForClass(opsForTable.iterator().next().getClassMetaData().getFullClassName()).getTable();
+                Table table = storeMgr.getStoreDataForClass(opsForTable.iterator().next().getClassMetaData().getFullClassName()).getTable();
 
                 List<Delete> deletes = new ArrayList(opsForTable.size());
                 for (ObjectProvider op : opsForTable)
@@ -578,7 +589,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("HBase.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
-            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
+            {
+                storeMgr.manageClasses(ec.getClassLoaderResolver(), new String[]{cmd.getFullClassName()});
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            }
+            Table table = sd.getTable();
             String tableName = table.getName();
             org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             if (cmd.isVersioned())
@@ -659,7 +676,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("HBase.Fetch.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
-            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
+            {
+                storeMgr.manageClasses(ec.getClassLoaderResolver(), new String[]{cmd.getFullClassName()});
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            }
+            Table table = sd.getTable();
             String tableName = table.getName();
             org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             Result result = HBaseUtils.getResultForObject(op, htable, table);
@@ -755,7 +778,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         try
         {
             final AbstractClassMetaData cmd = op.getClassMetaData();
-            Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
+            {
+                storeMgr.manageClasses(ec.getClassLoaderResolver(), new String[]{cmd.getFullClassName()});
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            }
+            Table table = sd.getTable();
             String tableName = table.getName();
             org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
             if (!HBaseUtils.objectExistsInTable(op, htable, table))

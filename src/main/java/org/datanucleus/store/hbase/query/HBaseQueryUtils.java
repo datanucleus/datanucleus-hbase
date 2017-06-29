@@ -47,6 +47,7 @@ import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.FieldValues;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
@@ -116,11 +117,13 @@ class HBaseQueryUtils
     {
         List results = new ArrayList();
 
-        if (!storeMgr.managesClass(cmd.getFullClassName()))
+        StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
         {
             storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         }
-        final Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        final Table table = sd.getTable();
         final String tableName = table.getName();
         final int[] fpMembers = fp.getFetchPlanForClass(cmd).getMemberNumbers();
         try
