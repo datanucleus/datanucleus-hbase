@@ -104,7 +104,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         final String tableNameString = table.getName();
         final TableName tableName = TableName.valueOf(tableNameString);
 
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(-1);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(-1);
         try
         {
             Connection conn = (Connection) mconn.getConnection();
@@ -301,7 +301,7 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
         final String tableNameString = table.getName();
         final TableName tableName = TableName.valueOf(tableNameString);
 
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(-1);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(-1);
         try
         {
             Connection conn = (Connection) mconn.getConnection();

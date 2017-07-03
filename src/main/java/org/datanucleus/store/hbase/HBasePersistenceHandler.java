@@ -105,7 +105,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
         Table table = sd.getTable();
 
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(ec);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             String tableName = table.getName();
@@ -285,7 +285,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         assertReadOnlyForUpdateOfObject(op);
 
         ExecutionContext ec = op.getExecutionContext();
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(ec);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             long startTime = System.currentTimeMillis();
@@ -482,7 +482,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         {
             String tableName = entry.getKey();
             Set<ObjectProvider> opsForTable = entry.getValue();
-            HBaseManagedConnection mconn = (HBaseManagedConnection)storeMgr.getConnection(ec);
+            HBaseManagedConnection mconn = (HBaseManagedConnection)storeMgr.getConnectionManager().getConnection(ec);
             try
             {
                 long startTime = System.currentTimeMillis();
@@ -579,7 +579,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         assertReadOnlyForUpdateOfObject(op);
 
         ExecutionContext ec = op.getExecutionContext();
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(ec);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             AbstractClassMetaData cmd = op.getClassMetaData();
@@ -648,7 +648,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
     public void fetchObject(ObjectProvider op, int[] fieldNumbers)
     {
         ExecutionContext ec = op.getExecutionContext();
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(ec);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             AbstractClassMetaData cmd = op.getClassMetaData();
@@ -773,7 +773,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
     public void locateObject(ObjectProvider op)
     {
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(op.getExecutionContext());
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(op.getExecutionContext());
         ExecutionContext ec = op.getExecutionContext();
         try
         {

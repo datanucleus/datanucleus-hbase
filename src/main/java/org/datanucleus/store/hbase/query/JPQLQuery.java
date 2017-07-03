@@ -237,7 +237,7 @@ public class JPQLQuery extends AbstractJPQLQuery
 
     protected Object performExecute(Map parameters)
     {
-        HBaseManagedConnection mconn = (HBaseManagedConnection) getStoreManager().getConnection(ec);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) getStoreManager().getConnectionManager().getConnection(ec);
         try
         {
             long startTime = System.currentTimeMillis();

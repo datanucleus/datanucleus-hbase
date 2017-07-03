@@ -81,6 +81,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
         schemaHandler = new HBaseSchemaHandler(this);
         persistenceHandler = new HBasePersistenceHandler(this);
+        this.connectionMgr.disableConnectionPool();
 
         // Add listener so we can check all metadata for unsupported features and required schema
         metadataListener = new HBaseMetaDataListener(this);
@@ -102,12 +103,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         }
 
         logConfiguration();
-    }
-
-    protected void registerConnectionMgr()
-    {
-        super.registerConnectionMgr();
-        this.connectionMgr.disableConnectionPool();
     }
 
     public synchronized void close()
