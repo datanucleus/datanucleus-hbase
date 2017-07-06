@@ -24,12 +24,6 @@ Contributors:
         <store-manager class-name="org.datanucleus.store.hbase.HBaseStoreManager" key="hbase" url-key="hbase"/>
     </extension>
 
-    <!-- QUERY LANGUAGES -->
-    <extension point="org.datanucleus.store_query_query">
-        <query class-name="org.datanucleus.store.hbase.query.JDOQLQuery" datastore="hbase" name="JDOQL"/>
-        <query class-name="org.datanucleus.store.hbase.query.JPQLQuery" datastore="hbase" name="JPQL"/>
-    </extension>
-
     <!-- CONNECTION FACTORY -->
     <extension point="org.datanucleus.store_connectionfactory">
         <connectionfactory name="hbase" class-name="org.datanucleus.store.hbase.ConnectionFactoryImpl" transactional="true"
