@@ -257,14 +257,14 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
      * Takes the superclass properties and adds on the "table-name" where appropriate.
      * @param cmd MetaData for the class
      * @param absoluteFieldNumber Number of the field (-1 = datastore identity)
-     * @param ec execution context
+     * @param clr ClassLoader resolver
      * @param seqmd Any sequence metadata
      * @param tablegenmd Any table generator metadata
      * @return The properties to use for this field
      */
-    protected Properties getPropertiesForGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber, ExecutionContext ec, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
+    protected Properties getPropertiesForGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber, ClassLoaderResolver clr, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
     {
-        Properties props = super.getPropertiesForGenerator(cmd, absoluteFieldNumber, ec, seqmd, tablegenmd);
+        Properties props = super.getPropertiesForGenerator(cmd, absoluteFieldNumber, clr, seqmd, tablegenmd);
 
         IdentityStrategy strategy = null;
         if (absoluteFieldNumber >= 0)
@@ -283,9 +283,9 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
         if (!managesClass(cmd.getFullClassName()))
         {
-            manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            manageClasses(clr, cmd.getFullClassName());
         }
-        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        Table table = getStoreDataForClass(cmd.getFullClassName()).getTable();
         props.setProperty("table-name", table.getName());
         if (strategy == IdentityStrategy.INCREMENT && tablegenmd != null)
         {
