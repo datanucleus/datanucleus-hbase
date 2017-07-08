@@ -262,9 +262,9 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
      * @param tablegenmd Any table generator metadata
      * @return The properties to use for this field
      */
-    protected Properties getPropertiesForGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber, ClassLoaderResolver clr, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
+    protected Properties getPropertiesForValueGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber, ClassLoaderResolver clr, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
     {
-        Properties props = super.getPropertiesForGenerator(cmd, absoluteFieldNumber, clr, seqmd, tablegenmd);
+        Properties props = super.getPropertiesForValueGenerator(cmd, absoluteFieldNumber, clr, seqmd, tablegenmd);
 
         IdentityStrategy strategy = null;
         if (absoluteFieldNumber >= 0)
