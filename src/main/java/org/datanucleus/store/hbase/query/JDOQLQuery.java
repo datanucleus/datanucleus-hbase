@@ -37,6 +37,7 @@ import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.query.expression.HBaseBooleanExpression;
 import org.datanucleus.store.query.AbstractJDOQLQuery;
+import org.datanucleus.store.query.Query;
 import org.datanucleus.store.query.QueryManager;
 import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
@@ -242,7 +243,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021046", "JDOQL", getSingleStringQuery(), null));
+                NucleusLogger.QUERY.debug(Localiser.msg("021046", Query.LANGUAGE_JDOQL, getSingleStringQuery(), null));
             }
 
             boolean filterInMemory = true;
@@ -330,7 +331,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", "" + (System.currentTimeMillis() - startTime)));
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", Query.LANGUAGE_JDOQL, "" + (System.currentTimeMillis() - startTime)));
             }
 
             if (type == QueryType.BULK_DELETE)
