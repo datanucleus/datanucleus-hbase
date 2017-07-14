@@ -35,7 +35,7 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ClassMetaData;
 import org.datanucleus.metadata.ClassPersistenceModifier;
 import org.datanucleus.metadata.IdentityMetaData;
-import org.datanucleus.metadata.IdentityStrategy;
+import org.datanucleus.metadata.ValueGenerationStrategy;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.metadata.MetaDataManager;
 import org.datanucleus.metadata.SequenceMetaData;
@@ -266,7 +266,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     {
         Properties props = super.getPropertiesForValueGenerator(cmd, absoluteFieldNumber, clr, seqmd, tablegenmd);
 
-        IdentityStrategy strategy = null;
+        ValueGenerationStrategy strategy = null;
         if (absoluteFieldNumber >= 0)
         {
             // real field
@@ -287,7 +287,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         }
         Table table = getStoreDataForClass(cmd.getFullClassName()).getTable();
         props.setProperty("table-name", table.getName());
-        if (strategy == IdentityStrategy.INCREMENT && tablegenmd != null)
+        if (strategy == ValueGenerationStrategy.INCREMENT && tablegenmd != null)
         {
             // User has specified a TableGenerator (JPA)
             // Using JPA generator so don't enable initial value detection

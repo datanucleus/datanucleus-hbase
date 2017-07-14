@@ -19,7 +19,7 @@ package org.datanucleus.store.hbase;
 
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.IdentityStrategy;
+import org.datanucleus.metadata.ValueGenerationStrategy;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.util.NucleusLogger;
@@ -41,10 +41,10 @@ public class HBaseMetaDataListener implements MetaDataListener
     {
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            if (cmd.getIdentityMetaData() != null && cmd.getIdentityMetaData().getValueStrategy() == IdentityStrategy.IDENTITY)
+            if (cmd.getIdentityMetaData() != null && cmd.getIdentityMetaData().getValueStrategy() == ValueGenerationStrategy.IDENTITY)
             {
                 // Change to INCREMENT since we don't support IDENTITY
-                cmd.getIdentityMetaData().setValueStrategy(IdentityStrategy.INCREMENT);
+                cmd.getIdentityMetaData().setValueStrategy(ValueGenerationStrategy.INCREMENT);
                 NucleusLogger.METADATA.warn("Class " + cmd.getFullClassName() +
                     " has been specified to use datastore-identity with IDENTITY value generation, but not supported on HBase. Using INCREMENT");
             }
@@ -57,10 +57,10 @@ public class HBaseMetaDataListener implements MetaDataListener
                 for (int i=0;i<pkFieldNumbers.length;i++)
                 {
                     AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNumbers[i]);
-                    if (mmd.getValueStrategy() == IdentityStrategy.IDENTITY)
+                    if (mmd.getValueStrategy() == ValueGenerationStrategy.IDENTITY)
                     {
                         // Change to INCREMENT since we don't support IDENTITY
-                        cmd.getIdentityMetaData().setValueStrategy(IdentityStrategy.INCREMENT);
+                        cmd.getIdentityMetaData().setValueStrategy(ValueGenerationStrategy.INCREMENT);
                         NucleusLogger.METADATA.warn("Field " + mmd.getFullFieldName() +
                             " has been specified to use IDENTITY value generation, but not supported on HBase. Using INCREMENT");
                     }
