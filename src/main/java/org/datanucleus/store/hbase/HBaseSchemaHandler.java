@@ -277,7 +277,6 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
 
     /**
      * Delete the schema for the specified class from HBase.
-     * @param storeMgr HBase StoreManager
      * @param cmd Metadata for the class
      */
     void deleteSchemaForClass(final AbstractClassMetaData cmd)
