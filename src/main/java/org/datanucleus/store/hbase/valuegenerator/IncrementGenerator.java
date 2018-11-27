@@ -102,7 +102,9 @@ public class IncrementGenerator extends AbstractConnectedGenerator<Long>
                 TableName tableName = TableName.valueOf(tableNameString);
                 HBaseStoreManager hbaseMgr = (HBaseStoreManager) storeMgr;
                 Configuration config = hbaseMgr.getHbaseConfig();
-                // TODO Replace with conn.getAdmin()
+                // TODO Replace with conn.getAdmin() ... release the connection after use also
+//                HBaseManagedConnection mconn = (HBaseManagedConnection) connectionProvider.retrieveConnection();
+//                HBaseAdmin admin = ((Connection) mconn.getConnection()).getAdmin();
                 HBaseAdmin admin = new HBaseAdmin(config);
                 try
                 {
