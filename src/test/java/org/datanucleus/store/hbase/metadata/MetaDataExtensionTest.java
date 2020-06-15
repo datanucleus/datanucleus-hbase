@@ -17,8 +17,6 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.metadata;
 
-import org.datanucleus.store.hbase.metadata.MetaDataExtension;
-
 import junit.framework.TestCase;
 
 /**

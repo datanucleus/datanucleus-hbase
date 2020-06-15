@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.FileMetaData;
-import org.datanucleus.store.hbase.metadata.MetaDataExtensionParser;
-import org.datanucleus.store.hbase.metadata.MetaDataExtension;
 
 /**
  * comments.
