@@ -383,7 +383,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 try
                 {
                     Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
-                    coll = (Collection<Object>) instanceType.newInstance();
+                    coll = (Collection<Object>) instanceType.getDeclaredConstructor().newInstance();
                 }
                 catch (Exception e)
                 {
@@ -521,7 +521,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 try
                 {
                     Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), false);
-                    map = (Map) instanceType.newInstance();
+                    map = (Map) instanceType.getDeclaredConstructor().newInstance();
                 }
                 catch (Exception e)
                 {
@@ -904,7 +904,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         try
                         {
                             Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
-                            coll = (Collection<Object>) instanceType.newInstance();
+                            coll = (Collection<Object>) instanceType.getDeclaredConstructor().newInstance();
                         }
                         catch (Exception e)
                         {
@@ -934,7 +934,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         try
                         {
                             Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), null);
-                            map = (Map) instanceType.newInstance();
+                            map = (Map) instanceType.getDeclaredConstructor().newInstance();
                         }
                         catch (Exception e)
                         {
