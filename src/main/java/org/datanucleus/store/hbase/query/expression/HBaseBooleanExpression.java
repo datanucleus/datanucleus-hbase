@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.exceptions.NucleusException;
-import org.datanucleus.query.expression.Expression;
+import org.datanucleus.store.query.expression.Expression;
 
 /**
  * Representation of a boolean expression in HBase queries.
