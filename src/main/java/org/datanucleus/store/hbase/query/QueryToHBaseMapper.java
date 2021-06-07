@@ -48,9 +48,9 @@ import org.datanucleus.store.query.expression.PrimaryExpression;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
+import org.datanucleus.store.types.converters.TypeConversionHelper;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
-import org.datanucleus.util.TypeConversionHelper;
 
 /**
  * Class which maps a compiled (generic) query to a HBase query.
