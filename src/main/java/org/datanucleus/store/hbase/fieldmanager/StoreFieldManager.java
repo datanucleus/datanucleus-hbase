@@ -60,11 +60,11 @@ import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
+import org.datanucleus.store.types.converters.EnumConversionHelper;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
-import org.datanucleus.util.TypeConversionHelper;
 
 /**
  * FieldManager to use for storing values into HBase from a managed persistable object.
@@ -652,7 +652,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
             else if (Enum.class.isAssignableFrom(value.getClass()))
             {
-                Object storedValue = TypeConversionHelper.getStoredValueFromEnum(mmd, FieldRole.ROLE_FIELD, (Enum)value);
+                Object storedValue = EnumConversionHelper.getStoredValueFromEnum(mmd, FieldRole.ROLE_FIELD, (Enum)value);
                 if (storedValue instanceof Number)
                 {
                     put.addColumn(familyName.getBytes(), qualifName.getBytes(), Bytes.toBytes(((Number)storedValue).intValue()));

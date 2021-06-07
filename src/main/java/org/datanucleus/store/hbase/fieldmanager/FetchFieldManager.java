@@ -59,10 +59,10 @@ import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
+import org.datanucleus.store.types.converters.EnumConversionHelper;
 import org.datanucleus.store.types.converters.MultiColumnConverter;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.NucleusLogger;
-import org.datanucleus.util.TypeConversionHelper;
 
 /**
  * FieldManager to use for retrieving values from HBase to put into a persistable object.
@@ -895,7 +895,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     }
                     else if (Enum.class.isAssignableFrom(type))
                     {
-                        returnValue = TypeConversionHelper.getEnumForStoredValue(mmd, FieldRole.ROLE_FIELD, value, clr);
+                        returnValue = EnumConversionHelper.getEnumForStoredValue(mmd, FieldRole.ROLE_FIELD, value, clr);
                         return optional ? Optional.of(returnValue) : returnValue;
                     }
                     else if (Collection.class.isAssignableFrom(type))
