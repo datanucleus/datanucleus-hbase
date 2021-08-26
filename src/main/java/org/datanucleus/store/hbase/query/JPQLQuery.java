@@ -274,7 +274,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                         // Filter on multi-tenant discriminator
                         String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                         String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
-                        String value = ec.getNucleusContext().getTenantId(ec);
+                        String value = ec.getTenantId();
                         filterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
                     }
 
