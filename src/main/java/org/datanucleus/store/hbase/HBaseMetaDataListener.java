@@ -41,10 +41,10 @@ public class HBaseMetaDataListener implements MetaDataListener
     {
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            if (cmd.getIdentityMetaData() != null && cmd.getIdentityMetaData().getValueStrategy() == ValueGenerationStrategy.IDENTITY)
+            if (cmd.getDatastoreIdentityMetaData() != null && cmd.getDatastoreIdentityMetaData().getValueStrategy() == ValueGenerationStrategy.IDENTITY)
             {
                 // Change to INCREMENT since we don't support IDENTITY
-                cmd.getIdentityMetaData().setValueStrategy(ValueGenerationStrategy.INCREMENT);
+                cmd.getDatastoreIdentityMetaData().setValueStrategy(ValueGenerationStrategy.INCREMENT);
                 NucleusLogger.METADATA.warn("Class " + cmd.getFullClassName() +
                     " has been specified to use datastore-identity with IDENTITY value generation, but not supported on HBase. Using INCREMENT");
             }
@@ -60,7 +60,7 @@ public class HBaseMetaDataListener implements MetaDataListener
                     if (mmd.getValueStrategy() == ValueGenerationStrategy.IDENTITY)
                     {
                         // Change to INCREMENT since we don't support IDENTITY
-                        cmd.getIdentityMetaData().setValueStrategy(ValueGenerationStrategy.INCREMENT);
+                        cmd.getDatastoreIdentityMetaData().setValueStrategy(ValueGenerationStrategy.INCREMENT);
                         NucleusLogger.METADATA.warn("Field " + mmd.getFullFieldName() +
                             " has been specified to use IDENTITY value generation, but not supported on HBase. Using INCREMENT");
                     }

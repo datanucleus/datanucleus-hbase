@@ -34,7 +34,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ClassMetaData;
 import org.datanucleus.metadata.ClassPersistenceModifier;
-import org.datanucleus.metadata.IdentityMetaData;
+import org.datanucleus.metadata.DatastoreIdentityMetaData;
 import org.datanucleus.metadata.ValueGenerationStrategy;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.metadata.MetaDataManager;
@@ -277,7 +277,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         {
             // datastore-identity surrogate field
             // always use the root IdentityMetaData since the root class defines the identity
-            IdentityMetaData idmd = cmd.getBaseIdentityMetaData();
+            DatastoreIdentityMetaData idmd = cmd.getBaseDatastoreIdentityMetaData();
             strategy = idmd.getValueStrategy();
         }
 
