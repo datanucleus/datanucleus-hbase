@@ -617,6 +617,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             op.provideFields(cmd.getAllMemberPositions(), new DeleteFieldManager(op, true));
 
             // Delete the object
+            // TODO Support SOFT_DELETE
             Delete delete = HBaseUtils.getDeleteForObject(op, table);
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
             {
