@@ -174,12 +174,17 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 put.addColumn(familyName.getBytes(), qualifName.getBytes(), discVal.getBytes());
             }
 
-            if (ec.getNucleusContext().isClassMultiTenant(cmd))
+            Column multitenancyCol = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY);
+            if (multitenancyCol != null)
             {
-                // Multi-tenancy discriminator
-                String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
-                String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
-                put.addColumn(familyName.getBytes(), qualifName.getBytes(), ec.getTenantId().getBytes());
+                String tenantId = ec.getTenantId();
+                if (tenantId != null)
+                {
+                    // Multi-tenancy discriminator
+                    String familyName = HBaseUtils.getFamilyNameForColumn(multitenancyCol);
+                    String qualifName = HBaseUtils.getQualifierNameForColumn(multitenancyCol);
+                    put.addColumn(familyName.getBytes(), qualifName.getBytes(), tenantId.getBytes());
+                }
             }
 
             Column softDeleteCol = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE);

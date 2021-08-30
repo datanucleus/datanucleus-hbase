@@ -39,6 +39,7 @@ import org.datanucleus.store.query.QueryManager;
 import org.datanucleus.store.query.expression.Expression;
 import org.datanucleus.store.query.inmemory.JDOQLInMemoryEvaluator;
 import org.datanucleus.store.query.inmemory.JavaQueryInMemoryEvaluator;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
@@ -269,21 +270,26 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 Table table = (sd != null ? sd.getTable() : null);
                 if (table != null)
                 {
-                    if (ec.getNucleusContext().isClassMultiTenant(cmd))
+                    Column multitenancyCol = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY);
+                    if (multitenancyCol != null)
                     {
-                        // Filter on discriminator for this tenant
-                        String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
-                        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY));
                         String value = ec.getTenantId();
-                        HBaseBooleanExpression multitenantFilterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
-                        filterExpr = multitenantFilterExpr;
+                        if (value != null)
+                        {
+                            // Filter on discriminator for this tenant
+                            String familyName = HBaseUtils.getFamilyNameForColumn(multitenancyCol);
+                            String qualifName = HBaseUtils.getQualifierNameForColumn(multitenancyCol);
+                            HBaseBooleanExpression multitenantFilterExpr = new HBaseBooleanExpression(familyName, qualifName, value, Expression.OP_EQ);
+                            filterExpr = multitenantFilterExpr;
+                        }
                     }
 
-                    if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+                    Column softDeleteCol = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE);
+                    if (softDeleteCol != null)
                     {
                         // Filter on soft-delete flag
-                        String familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
-                        String qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE));
+                        String familyName = HBaseUtils.getFamilyNameForColumn(softDeleteCol);
+                        String qualifName = HBaseUtils.getQualifierNameForColumn(softDeleteCol);
                         HBaseBooleanExpression softDeleteFilterExpr = new HBaseBooleanExpression(familyName, qualifName, Boolean.FALSE, Expression.OP_EQ);
                         if (filterExpr != null)
                         {
