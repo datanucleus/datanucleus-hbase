@@ -93,8 +93,8 @@ public class MetaDataExtensionParserTest extends TestCase
     private AbstractClassMetaData getPersistenceClass()
     {
         FileMetaData md = new FileMetaData();
-        md.newPackageMetadata("my.test.package");
-        md.getPackage(0).newClassMetadata("FakeEntity");
+        md.newPackageMetaData("my.test.package");
+        md.getPackage(0).newClassMetaData("FakeEntity");
         return md.getPackage(0).getClass(0);
     }
 
