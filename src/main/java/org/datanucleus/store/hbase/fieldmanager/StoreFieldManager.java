@@ -233,7 +233,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (RelationType.isRelationSingleValued(relationType))
             {
                 // Embedded PC
-                if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
+                if (!mmd.isCascadePersist())
                 {
                     if (!ec.getApiAdapter().isDetached(value) && !ec.getApiAdapter().isPersistent(value))
                     {
@@ -334,7 +334,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         if (RelationType.isRelationSingleValued(relationType))
         {
             // 1-1/N-1 relation
-            if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
+            if (!mmd.isCascadePersist())
             {
                 if (!ec.getApiAdapter().isDetached(value) && !ec.getApiAdapter().isPersistent(value))
                 {
@@ -412,7 +412,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (mmd.hasCollection())
             {
                 Collection coll = (Collection)value;
-                if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
+                if (!mmd.isCascadePersist())
                 {
                     // Field doesnt support cascade-persist so no reachability
                     if (NucleusLogger.PERSISTENCE.isDebugEnabled())
