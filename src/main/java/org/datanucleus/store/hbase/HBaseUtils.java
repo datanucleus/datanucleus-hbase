@@ -224,14 +224,14 @@ public class HBaseUtils
         return version;
     }
 
-    public static Put getPutForObject(ObjectProvider op, Table schemaTable) throws IOException
+    public static Put getPutForObject(ObjectProvider sm, Table schemaTable) throws IOException
     {
-        byte[] rowKey = (byte[]) op.getAssociatedValue("HBASE_ROW_KEY");
+        byte[] rowKey = (byte[]) sm.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
         {
-            AbstractClassMetaData cmd = op.getClassMetaData();
-            final Object[] pkValues = findKeyObjects(op, cmd, schemaTable);
-            ExecutionContext ec = op.getExecutionContext();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
+            final Object[] pkValues = findKeyObjects(sm, cmd, schemaTable);
+            ExecutionContext ec = sm.getExecutionContext();
             if (ec.getStatistics() != null)
             {
                 // Add to statistics
@@ -242,14 +242,14 @@ public class HBaseUtils
         return new Put(rowKey);
     }
 
-    public static Delete getDeleteForObject(ObjectProvider op, Table schemaTable) throws IOException
+    public static Delete getDeleteForObject(ObjectProvider sm, Table schemaTable) throws IOException
     {
-        byte[] rowKey = (byte[]) op.getAssociatedValue("HBASE_ROW_KEY");
+        byte[] rowKey = (byte[]) sm.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
         {
-            AbstractClassMetaData cmd = op.getClassMetaData();
-            final Object[] pkValues = findKeyObjects(op, cmd, schemaTable);
-            ExecutionContext ec = op.getExecutionContext();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
+            final Object[] pkValues = findKeyObjects(sm, cmd, schemaTable);
+            ExecutionContext ec = sm.getExecutionContext();
             if (ec.getStatistics() != null)
             {
                 // Add to statistics
@@ -260,14 +260,14 @@ public class HBaseUtils
         return new Delete(rowKey);
     }
 
-    public static Get getGetForObject(ObjectProvider op, Table schemaTable) throws IOException
+    public static Get getGetForObject(ObjectProvider sm, Table schemaTable) throws IOException
     {
-        byte[] rowKey = (byte[]) op.getAssociatedValue("HBASE_ROW_KEY");
+        byte[] rowKey = (byte[]) sm.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
         {
-            AbstractClassMetaData cmd = op.getClassMetaData();
-            final Object[] pkValues = findKeyObjects(op, cmd, schemaTable);
-            ExecutionContext ec = op.getExecutionContext();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
+            final Object[] pkValues = findKeyObjects(sm, cmd, schemaTable);
+            ExecutionContext ec = sm.getExecutionContext();
             if (ec.getStatistics() != null)
             {
                 // Add to statistics
@@ -278,40 +278,40 @@ public class HBaseUtils
         return new Get(rowKey);
     }
 
-    public static Result getResultForObject(ObjectProvider op, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
+    public static Result getResultForObject(ObjectProvider sm, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
     {
-        Get get = getGetForObject(op, schemaTable);
+        Get get = getGetForObject(sm, schemaTable);
         return table.get(get);
     }
 
-    public static boolean objectExistsInTable(ObjectProvider op, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
+    public static boolean objectExistsInTable(ObjectProvider sm, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
     {
-        Get get = getGetForObject(op, schemaTable);
+        Get get = getGetForObject(sm, schemaTable);
         return table.exists(get);
     }
 
-    private static Object[] findKeyObjects(final ObjectProvider op, final AbstractClassMetaData cmd, Table schemaTable)
+    private static Object[] findKeyObjects(final ObjectProvider sm, final AbstractClassMetaData cmd, Table schemaTable)
     {
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            return new Object[]{IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId())};
+            return new Object[]{IdentityUtils.getTargetKeyForDatastoreIdentity(sm.getInternalObjectId())};
         }
         else if (cmd.getIdentityType() == IdentityType.APPLICATION)
         {
             final int[] pkFieldNums = cmd.getPKMemberPositions();
             List pkVals = new ArrayList();
-            ExecutionContext ec = op.getExecutionContext();
+            ExecutionContext ec = sm.getExecutionContext();
             ClassLoaderResolver clr = ec.getClassLoaderResolver();
             for (int i = 0; i < pkFieldNums.length; i++)
             {
                 AbstractMemberMetaData pkMmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNums[i]);
                 RelationType relType = pkMmd.getRelationType(clr);
-                Object fieldVal = op.provideField(pkFieldNums[i]);
-                if (relType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(op.getStoreManager().getMetaDataManager(), clr, pkMmd, relType, null))
+                Object fieldVal = sm.provideField(pkFieldNums[i]);
+                if (relType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(sm.getStoreManager().getMetaDataManager(), clr, pkMmd, relType, null))
                 {
                     // Embedded : allow 1 level of embedded field for PK
-                    ObjectProvider embOP = op.getExecutionContext().findObjectProvider(fieldVal);
-                    AbstractClassMetaData embCmd = embOP.getClassMetaData();
+                    ObjectProvider embSM = sm.getExecutionContext().findObjectProvider(fieldVal);
+                    AbstractClassMetaData embCmd = embSM.getClassMetaData();
                     int[] memberPositions = embCmd.getAllMemberPositions();
                     for (int j=0;j<memberPositions.length;j++)
                     {
@@ -322,7 +322,7 @@ public class HBaseUtils
                             continue;
                         }
 
-                        Object embFieldVal = embOP.provideField(memberPositions[j]);
+                        Object embFieldVal = embSM.provideField(memberPositions[j]);
                         pkVals.add(embFieldVal); // TODO Cater for field mapped to multiple columns
                     }
                 }
@@ -355,7 +355,7 @@ public class HBaseUtils
             final Object[] keyObjects = new Object[fieldNumbers.length];
             for (int i = 0; i < fieldNumbers.length; i++)
             {
-                keyObjects[i] = op.provideField(fieldNumbers[i]);
+                keyObjects[i] = sm.provideField(fieldNumbers[i]);
             }
             return keyObjects;
         }

@@ -80,9 +80,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         this.table = table;
     }
 
-    public FetchFieldManager(ObjectProvider op, Result result, Table table)
+    public FetchFieldManager(ObjectProvider sm, Result result, Table table)
     {
-        super(op);
+        super(sm);
         this.result = result;
         this.table = table;
     }
@@ -282,8 +282,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             if (mmd.isSerialized())
             {
                 // Make sure it has an ObjectProvider
-                ObjectProvider pcOP = ec.findObjectProvider(value);
-                if (pcOP == null || ec.getApiAdapter().getExecutionContext(value) == null)
+                ObjectProvider pcSM = ec.findObjectProvider(value);
+                if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
                     ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
                 }

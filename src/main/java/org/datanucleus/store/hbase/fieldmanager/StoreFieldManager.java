@@ -85,9 +85,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         this.table = table;
     }
 
-    public StoreFieldManager(ObjectProvider op, Put put, Delete delete, boolean insert, Table table)
+    public StoreFieldManager(ObjectProvider sm, Put put, Delete delete, boolean insert, Table table)
     {
-        super(op, insert);
+        super(sm, insert);
 
         this.put = put;
         this.delete = delete;
@@ -275,9 +275,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     return;
                 }
 
-                ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embOP, put, delete, insert, embMmds, table);
-                embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
+                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
+                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, insert, embMmds, table);
+                embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
             }
             else if (RelationType.isRelationMultiValued(relationType))
@@ -354,23 +354,23 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (mmd.isSerialized())
             {
                 // Assign an ObjectProvider to the serialised object if none present
-                ObjectProvider pcOP = ec.findObjectProvider(value);
-                if (pcOP == null || ec.getApiAdapter().getExecutionContext(value) == null)
+                ObjectProvider pcSM = ec.findObjectProvider(value);
+                if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
-                    pcOP = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
+                    pcSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
                 }
 
-                if (pcOP != null)
+                if (pcSM != null)
                 {
-                    pcOP.setStoringPC();
+                    pcSM.setStoringPC();
                 }
 
                 // Persist member as serialised
                 writeObjectField(familyName, qualifName, value);
 
-                if (pcOP != null)
+                if (pcSM != null)
                 {
-                    pcOP.unsetStoringPC();
+                    pcSM.unsetStoringPC();
                 }
                 return;
             }
