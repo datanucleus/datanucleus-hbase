@@ -275,7 +275,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     return;
                 }
 
-                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
+                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
                 FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, insert, embMmds, table);
                 embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
@@ -357,7 +357,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 ObjectProvider pcSM = ec.findObjectProvider(value);
                 if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
-                    pcSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
+                    pcSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
                 }
 
                 if (pcSM != null)
@@ -376,7 +376,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
 
             // Persist identity in the column of this object
-            Object valuePC = ec.persistObjectInternal(value, op, fieldNumber, -1);
+            Object valuePC = ec.persistObjectInternal(value, sm, fieldNumber, -1);
             Object valueID = ec.getApiAdapter().getIdForObject(valuePC);
 
             if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
@@ -404,7 +404,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             {
                 // Persist member as serialised
                 writeObjectField(familyName, qualifName, value);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
                 return;
             }
 
@@ -438,7 +438,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = collIter.next();
                     if (element != null)
                     {
-                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                        Object elementPC = ec.persistObjectInternal(element, sm, fieldNumber, -1);
                         Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
                         if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
@@ -471,7 +471,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
                 // Persist list<ids> into the column of this object
                 writeObjectField(familyName, qualifName, collIds);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
             }
             else if (mmd.hasMap())
             {
@@ -485,7 +485,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object mapValue = entry.getValue();
                     if (ec.getApiAdapter().isPersistable(mapKey))
                     {
-                        Object pKey = ec.persistObjectInternal(mapKey, op, fieldNumber, -1);
+                        Object pKey = ec.persistObjectInternal(mapKey, sm, fieldNumber, -1);
                         mapKey = ec.getApiAdapter().getIdForObject(pKey);
                         if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
@@ -496,7 +496,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     {
                         if (mapValue != null)
                         {
-                            Object pVal = ec.persistObjectInternal(mapValue, op, fieldNumber, -1);
+                            Object pVal = ec.persistObjectInternal(mapValue, sm, fieldNumber, -1);
                             mapValue = ec.getApiAdapter().getIdForObject(pVal);
                             if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                             {
@@ -523,7 +523,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
                 // Persist map<keyids,valids> into the column of this object
                 writeObjectField(familyName, qualifName, mapIds);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
             }
             else if (mmd.hasArray())
             {
@@ -533,7 +533,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = Array.get(value, i);
                     if (element != null)
                     {
-                        Object elementPC = ec.persistObjectInternal(element, op, fieldNumber, -1);
+                        Object elementPC = ec.persistObjectInternal(element, sm, fieldNumber, -1);
                         Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
                         if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
@@ -577,7 +577,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
 
                 writeObjectField(familyName, qualifName, value);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
                 return;
             }
 
@@ -674,7 +674,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 if (coll.isEmpty())
                 {
                     writeObjectField(familyName, qualifName, value);
-                    SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                    SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
                     return;
                 }
 
@@ -702,7 +702,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     dbColl.add(datastoreValue);
                 }
                 writeObjectField(familyName, qualifName, dbColl);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
                 return;
             }
             else if (Map.class.isAssignableFrom(value.getClass()))
@@ -711,7 +711,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 if (map.isEmpty())
                 {
                     writeObjectField(familyName, qualifName, value);
-                    SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                    SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
                     return;
                 }
 
@@ -741,7 +741,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     dbMap.put(datastoreKey, datastoreVal);
                 }
                 writeObjectField(familyName, qualifName, dbMap);
-                SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+                SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
                 return;
             }
             else if (value.getClass().isArray())
@@ -762,7 +762,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             // Fallback to serialised
             writeObjectField(familyName, qualifName, value);
-            SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+            SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
         }
     }
 

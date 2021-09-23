@@ -237,7 +237,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     return null;
                 }
 
-                ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embCmd, op, fieldNumber);
+                ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embCmd, sm, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmds, table);
                 embSM.replaceFields(embCmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
@@ -285,7 +285,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 ObjectProvider pcSM = ec.findObjectProvider(value);
                 if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
-                    ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, op, fieldNumber);
+                    ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
                 }
                 return value;
             }
@@ -344,7 +344,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 }
                 catch (NucleusObjectNotFoundException onfe)
                 {
-                    NucleusLogger.PERSISTENCE.warn("Object=" + op + " field=" + mmd.getFullFieldName() + " has id=" + persistableId + " but could not instantiate object with that identity");
+                    NucleusLogger.PERSISTENCE.warn("Object=" + sm + " field=" + mmd.getFullFieldName() + " has id=" + persistableId + " but could not instantiate object with that identity");
                 }
             }
             else if (relationStorageMode.equalsIgnoreCase(HBaseStoreManager.RELATION_IDENTITY_STORAGE_HBASE_LEGACY))
@@ -374,7 +374,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             if (mmd.isSerialized())
             {
                 Object returnValue = optional ? Optional.of(value) : value;
-                return (op != null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
+                return (sm != null) ? SCOUtils.wrapSCOField(sm, fieldNumber, returnValue, true) : returnValue;
             }
 
             if (mmd.hasCollection())
@@ -458,13 +458,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     }
                 }
 
-                if (op != null)
+                if (sm != null)
                 {
                     // Wrap if SCO
-                    coll = (Collection) SCOUtils.wrapSCOField(op, fieldNumber, coll, true);
+                    coll = (Collection) SCOUtils.wrapSCOField(sm, fieldNumber, coll, true);
                     if (changeDetected)
                     {
-                        op.makeDirty(mmd.getAbsoluteFieldNumber());
+                        sm.makeDirty(mmd.getAbsoluteFieldNumber());
                     }
                 }
                 return coll;
@@ -598,13 +598,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     }
                 }
 
-                if (op != null)
+                if (sm != null)
                 {
                     // Wrap if SCO
-                    map = (Map) SCOUtils.wrapSCOField(op, fieldNumber, map, true);
+                    map = (Map) SCOUtils.wrapSCOField(sm, fieldNumber, map, true);
                     if (changeDetected)
                     {
-                        op.makeDirty(fieldNumber);
+                        sm.makeDirty(fieldNumber);
                     }
                 }
                 return map;
@@ -682,9 +682,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             Array.set(array, j, Array.get(arrayOld, j));
                         }
                     }
-                    if (op != null)
+                    if (sm != null)
                     {
-                        op.makeDirty(mmd.getAbsoluteFieldNumber());
+                        sm.makeDirty(mmd.getAbsoluteFieldNumber());
                     }
                 }
                 return array;
@@ -809,9 +809,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         }
 
                         Object memberValue = conv.toMemberType(valuesArr);
-                        if (op != null && memberValue != null)
+                        if (sm != null && memberValue != null)
                         {
-                            memberValue = SCOUtils.wrapSCOField(op, fieldNumber, memberValue, true);
+                            memberValue = SCOUtils.wrapSCOField(sm, fieldNumber, memberValue, true);
                         }
                         return memberValue;
                     }
@@ -926,7 +926,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             coll.add(elem);
                         }
 
-                        return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), coll, true) : coll;
+                        return (sm!=null) ? SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), coll, true) : coll;
                     }
                     else if (Map.class.isAssignableFrom(type))
                     {
@@ -964,7 +964,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             map.put(key, val);
                         }
 
-                        return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), map, true) : map;          
+                        return (sm!=null) ? SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), map, true) : map;          
                     }
                     else if (type.isArray())
                     {
@@ -985,7 +985,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 }
             }
             returnValue = optional ? Optional.of(returnValue) : returnValue;
-            return (op!=null) ? SCOUtils.wrapSCOField(op, fieldNumber, returnValue, true) : returnValue;
+            return (sm!=null) ? SCOUtils.wrapSCOField(sm, fieldNumber, returnValue, true) : returnValue;
         }
     }
 
