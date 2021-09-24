@@ -45,7 +45,7 @@ import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.FieldValues;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
@@ -271,11 +271,11 @@ class HBaseQueryUtils
         Object pc = ec.findObject(id, 
             new FieldValues()
             {
-                public void fetchFields(ObjectProvider sm)
+                public void fetchFields(DNStateManager sm)
                 {
                     sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider sm)
+                public void fetchNonLoadedFields(DNStateManager sm)
                 {
                     sm.replaceNonLoadedFields(fpMembers, fm);
                 }
@@ -285,7 +285,7 @@ class HBaseQueryUtils
                 }
             }, type, ignoreCache, false);
 
-        ObjectProvider sm = ec.findObjectProvider(pc);
+        DNStateManager sm = ec.findStateManager(pc);
 
         if (cmd.isVersioned())
         {
@@ -362,12 +362,12 @@ class HBaseQueryUtils
         Object pc = ec.findObject(id, 
             new FieldValues()
             {
-                // ObjectProvider calls the fetchFields method
-                public void fetchFields(ObjectProvider sm)
+                // StateManager calls the fetchFields method
+                public void fetchFields(DNStateManager sm)
                 {
                     sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider sm)
+                public void fetchNonLoadedFields(DNStateManager sm)
                 {
                     sm.replaceNonLoadedFields(fpMembers, fm);
                 }
@@ -377,7 +377,7 @@ class HBaseQueryUtils
                 }
             }, null, ignoreCache, false);
 
-        ObjectProvider sm = ec.findObjectProvider(pc);
+        DNStateManager sm = ec.findStateManager(pc);
 
         if (cmd.isVersioned())
         {
@@ -431,12 +431,12 @@ class HBaseQueryUtils
         Object pc = ec.findObject(id, 
             new FieldValues()
             {
-                // ObjectProvider calls the fetchFields method
-                public void fetchFields(ObjectProvider sm)
+                // StateManager calls the fetchFields method
+                public void fetchFields(DNStateManager sm)
                 {
                     sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider sm)
+                public void fetchNonLoadedFields(DNStateManager sm)
                 {
                     sm.replaceNonLoadedFields(fpMembers, fm);
                 }
@@ -449,7 +449,7 @@ class HBaseQueryUtils
         if (cmd.isVersioned())
         {
             // Set the version on the object
-            ObjectProvider sm = ec.findObjectProvider(pc);
+            DNStateManager sm = ec.findStateManager(pc);
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
             if (vermd.getFieldName() != null)
@@ -468,7 +468,7 @@ class HBaseQueryUtils
 
         if (result.getRow() != null)
         {
-            ObjectProvider sm = ec.findObjectProvider(pc);
+            DNStateManager sm = ec.findStateManager(pc);
             sm.setAssociatedValue("HBASE_ROW_KEY", result.getRow());
         }
 

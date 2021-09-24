@@ -48,7 +48,7 @@ import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
@@ -224,7 +224,7 @@ public class HBaseUtils
         return version;
     }
 
-    public static Put getPutForObject(ObjectProvider sm, Table schemaTable) throws IOException
+    public static Put getPutForObject(DNStateManager sm, Table schemaTable) throws IOException
     {
         byte[] rowKey = (byte[]) sm.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
@@ -242,7 +242,7 @@ public class HBaseUtils
         return new Put(rowKey);
     }
 
-    public static Delete getDeleteForObject(ObjectProvider sm, Table schemaTable) throws IOException
+    public static Delete getDeleteForObject(DNStateManager sm, Table schemaTable) throws IOException
     {
         byte[] rowKey = (byte[]) sm.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
@@ -260,7 +260,7 @@ public class HBaseUtils
         return new Delete(rowKey);
     }
 
-    public static Get getGetForObject(ObjectProvider sm, Table schemaTable) throws IOException
+    public static Get getGetForObject(DNStateManager sm, Table schemaTable) throws IOException
     {
         byte[] rowKey = (byte[]) sm.getAssociatedValue("HBASE_ROW_KEY");
         if (rowKey == null)
@@ -278,19 +278,19 @@ public class HBaseUtils
         return new Get(rowKey);
     }
 
-    public static Result getResultForObject(ObjectProvider sm, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
+    public static Result getResultForObject(DNStateManager sm, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
     {
         Get get = getGetForObject(sm, schemaTable);
         return table.get(get);
     }
 
-    public static boolean objectExistsInTable(ObjectProvider sm, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
+    public static boolean objectExistsInTable(DNStateManager sm, org.apache.hadoop.hbase.client.Table table, Table schemaTable) throws IOException
     {
         Get get = getGetForObject(sm, schemaTable);
         return table.exists(get);
     }
 
-    private static Object[] findKeyObjects(final ObjectProvider sm, final AbstractClassMetaData cmd, Table schemaTable)
+    private static Object[] findKeyObjects(final DNStateManager sm, final AbstractClassMetaData cmd, Table schemaTable)
     {
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
@@ -310,7 +310,7 @@ public class HBaseUtils
                 if (relType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(sm.getStoreManager().getMetaDataManager(), clr, pkMmd, relType, null))
                 {
                     // Embedded : allow 1 level of embedded field for PK
-                    ObjectProvider embSM = sm.getExecutionContext().findObjectProvider(fieldVal);
+                    DNStateManager embSM = sm.getExecutionContext().findStateManager(fieldVal);
                     AbstractClassMetaData embCmd = embSM.getClassMetaData();
                     int[] memberPositions = embCmd.getAllMemberPositions();
                     for (int j=0;j<memberPositions.length;j++)

@@ -30,7 +30,7 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
@@ -51,7 +51,7 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
         this.mmds = mmds;
     }
 
-    public StoreEmbeddedFieldManager(ObjectProvider sm, Put put, Delete delete, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
+    public StoreEmbeddedFieldManager(DNStateManager sm, Put put, Delete delete, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
     {
         super(sm, put, delete, insert, table);
         this.mmds = mmds;
@@ -77,7 +77,7 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
             // Special case of this member being a link back to the owner. TODO Repeat this for nested and their owners
             if (sm != null)
             {
-                ObjectProvider[] ownerOPs = ec.getOwnersForEmbeddedObjectProvider(sm);
+                DNStateManager[] ownerOPs = ec.getOwnersForEmbeddedStateManager(sm);
                 if (ownerOPs != null && ownerOPs.length == 1 && value != ownerOPs[0].getObject())
                 {
                     // Make sure the owner field is set
@@ -125,9 +125,9 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                 }
                 else
                 {
-                    ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, sm, mmd);
-                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(embOP, put, delete, insert, embMmds, table);
-                    embOP.provideFields(embCmd.getAllMemberPositions(), storeEmbFM);
+                    DNStateManager embSM = ec.findStateManagerForEmbedded(value, sm, mmd);
+                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(embSM, put, delete, insert, embMmds, table);
+                    embSM.provideFields(embCmd.getAllMemberPositions(), storeEmbFM);
                     return;
                 }
             }

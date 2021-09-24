@@ -48,7 +48,7 @@ import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.JdbcType;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
@@ -80,7 +80,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         this.table = table;
     }
 
-    public FetchFieldManager(ObjectProvider sm, Result result, Table table)
+    public FetchFieldManager(DNStateManager sm, Result result, Table table)
     {
         super(sm);
         this.result = result;
@@ -237,7 +237,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     return null;
                 }
 
-                ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embCmd, sm, fieldNumber);
+                DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embCmd, sm, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmds, table);
                 embSM.replaceFields(embCmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
@@ -281,11 +281,11 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
             if (mmd.isSerialized())
             {
-                // Make sure it has an ObjectProvider
-                ObjectProvider pcSM = ec.findObjectProvider(value);
+                // Make sure it has an StateManager
+                DNStateManager pcSM = ec.findStateManager(value);
                 if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
-                    ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
+                    ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
                 }
                 return value;
             }

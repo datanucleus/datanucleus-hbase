@@ -46,7 +46,7 @@ import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.FieldPersistenceModifier;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
@@ -75,10 +75,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
     }
 
     /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractPersistenceHandler#insertObjects(org.datanucleus.store.ObjectProvider[])
+     * @see org.datanucleus.store.AbstractPersistenceHandler#insertObjects(org.datanucleus.state.DNStateManager[])
      */
     @Override
-    public void insertObjects(ObjectProvider... sms)
+    public void insertObjects(DNStateManager... sms)
     {
         if (sms.length == 1)
         {
@@ -90,7 +90,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         super.insertObjects(sms);
     }
 
-    public void insertObject(ObjectProvider sm)
+    public void insertObject(DNStateManager sm)
     {
         // Check if read-only so update not permitted
         assertReadOnlyForUpdateOfObject(sm);
@@ -284,7 +284,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    public void updateObject(ObjectProvider sm, int[] fieldNumbers)
+    public void updateObject(DNStateManager sm, int[] fieldNumbers)
     {
         // Check if read-only so update not permitted
         assertReadOnlyForUpdateOfObject(sm);
@@ -447,10 +447,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
     }
 
     /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractPersistenceHandler#deleteObjects(org.datanucleus.store.ObjectProvider[])
+     * @see org.datanucleus.store.AbstractPersistenceHandler#deleteObjects(org.datanucleus.state.DNStateManager[])
      */
     @Override
-    public void deleteObjects(ObjectProvider... sms)
+    public void deleteObjects(DNStateManager... sms)
     {
         if (sms.length == 1)
         {
@@ -461,7 +461,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         ExecutionContext ec = sms[0].getExecutionContext();
 
         // Separate the objects to be deleted into groups, for the "table" in question
-        Map<String, Set<ObjectProvider>> smsByTable = new HashMap<String, Set<ObjectProvider>>();
+        Map<String, Set<DNStateManager>> smsByTable = new HashMap<String, Set<DNStateManager>>();
         for (int i=0;i<sms.length;i++)
         {
             AbstractClassMetaData cmd = sms[i].getClassMetaData();
@@ -473,20 +473,20 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
             Table table = sd.getTable();
             String tableName = table.getName();
-            Set<ObjectProvider> smsForTable = smsByTable.get(tableName);
+            Set<DNStateManager> smsForTable = smsByTable.get(tableName);
             if (smsForTable == null)
             {
-                smsForTable = new HashSet<ObjectProvider>();
+                smsForTable = new HashSet<DNStateManager>();
                 smsByTable.put(tableName, smsForTable);
             }
             smsForTable.add(sms[i]);
         }
 
         Set<NucleusOptimisticException> optimisticExcps = null;
-        for (Map.Entry<String, Set<ObjectProvider>> entry : smsByTable.entrySet())
+        for (Map.Entry<String, Set<DNStateManager>> entry : smsByTable.entrySet())
         {
             String tableName = entry.getKey();
-            Set<ObjectProvider> smsForTable = entry.getValue();
+            Set<DNStateManager> smsForTable = entry.getValue();
             HBaseManagedConnection mconn = (HBaseManagedConnection)storeMgr.getConnectionManager().getConnection(ec);
             try
             {
@@ -495,7 +495,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 Table table = storeMgr.getStoreDataForClass(smsForTable.iterator().next().getClassMetaData().getFullClassName()).getTable();
 
                 List<Delete> deletes = new ArrayList(smsForTable.size());
-                for (ObjectProvider sm : smsForTable)
+                for (DNStateManager sm : smsForTable)
                 {
                     // Check if read-only so update not permitted
                     assertReadOnlyForUpdateOfObject(sm);
@@ -578,7 +578,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    public void deleteObject(ObjectProvider sm)
+    public void deleteObject(DNStateManager sm)
     {
         // Check if read-only so update not permitted
         assertReadOnlyForUpdateOfObject(sm);
@@ -651,7 +651,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    public void fetchObject(ObjectProvider sm, int[] fieldNumbers)
+    public void fetchObject(DNStateManager sm, int[] fieldNumbers)
     {
         ExecutionContext ec = sm.getExecutionContext();
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(ec);
@@ -777,7 +777,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         return null;
     }
 
-    public void locateObject(ObjectProvider sm)
+    public void locateObject(DNStateManager sm)
     {
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnectionManager().getConnection(sm.getExecutionContext());
         ExecutionContext ec = sm.getExecutionContext();
@@ -814,14 +814,14 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
     }
 
     /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractPersistenceHandler#locateObjects(org.datanucleus.state.ObjectProvider[])
+     * @see org.datanucleus.store.AbstractPersistenceHandler#locateObjects(org.datanucleus.state.DNStateManager[])
      */
     @Override
-    public void locateObjects(ObjectProvider[] sms)
+    public void locateObjects(DNStateManager[] sms)
     {
         // TODO This requires HBase 0.95 which adds exists(List) method.
         /*// Separate the objects to be persisted into groups, for the "table" in question
-        Map<String, Set<ObjectProvider>> smsByTable = new HashMap();
+        Map<String, Set<DNStateManager>> smsByTable = new HashMap();
         for (int i=0;i<sms.length;i++)
         {
             AbstractClassMetaData cmd = sms[i].getClassMetaData();
@@ -829,10 +829,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (!cmd.pkIsDatastoreAttributed(storeMgr))
             {
                 String tableName = table.getName();
-                Set<ObjectProvider> smsForTable = smsByTable.get(tableName);
+                Set<DNStateManager> smsForTable = smsByTable.get(tableName);
                 if (smsForTable == null)
                 {
-                    smsForTable = new HashSet<ObjectProvider>();
+                    smsForTable = new HashSet<DNStateManager>();
                     smsByTable.put(tableName, smsForTable);
                 }
                 opsForTable.add(sms[i]);
@@ -842,13 +842,13 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         ExecutionContext ec = sms[0].getExecutionContext();
         for (String tableName : smsByTable.keySet())
         {
-            Set<ObjectProvider> smsForTable = smsByTable.get(tableName);
+            Set<DNStateManager> smsForTable = smsByTable.get(tableName);
             HBaseManagedConnection mconn = (HBaseManagedConnection)storeMgr.getConnection(ec);
             try
             {
                 HTableInterface table = mconn.getHTable(tableName);
                 List<Get> gets = new ArrayList<Get>(opsForTable.size());
-                for (ObjectProvider sm : smsForTable)
+                for (DNStateManager sm : smsForTable)
                 {
                     Get get = HBaseUtils.getGetForObject(sm);
                     gets.add(get);

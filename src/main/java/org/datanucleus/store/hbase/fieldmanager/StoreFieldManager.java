@@ -50,7 +50,7 @@ import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.fieldmanager.AbstractStoreFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
@@ -85,7 +85,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         this.table = table;
     }
 
-    public StoreFieldManager(ObjectProvider sm, Put put, Delete delete, boolean insert, Table table)
+    public StoreFieldManager(DNStateManager sm, Put put, Delete delete, boolean insert, Table table)
     {
         super(sm, insert);
 
@@ -275,7 +275,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     return;
                 }
 
-                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
+                DNStateManager embSM = ec.findStateManagerForEmbedded(value, sm, mmd);
                 FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, insert, embMmds, table);
                 embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
@@ -353,11 +353,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             if (mmd.isSerialized())
             {
-                // Assign an ObjectProvider to the serialised object if none present
-                ObjectProvider pcSM = ec.findObjectProvider(value);
+                // Assign an StateManager to the serialised object if none present
+                DNStateManager pcSM = ec.findStateManager(value);
                 if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
-                    pcSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
+                    pcSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
                 }
 
                 if (pcSM != null)
