@@ -835,7 +835,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     smsForTable = new HashSet<DNStateManager>();
                     smsByTable.put(tableName, smsForTable);
                 }
-                opsForTable.add(sms[i]);
+                smsForTable.add(sms[i]);
             }
         }
 
