@@ -267,6 +267,11 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     {
         Properties props = super.getPropertiesForValueGenerator(cmd, absoluteFieldNumber, clr, seqmd, tablegenmd);
 
+        if (!managesClass(cmd.getFullClassName()))
+        {
+            manageClasses(clr, cmd.getFullClassName());
+        }
+
         ValueGenerationStrategy strategy = null;
         if (absoluteFieldNumber >= 0)
         {
@@ -282,10 +287,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             strategy = idmd.getValueStrategy();
         }
 
-        if (!managesClass(cmd.getFullClassName()))
-        {
-            manageClasses(clr, cmd.getFullClassName());
-        }
         Table table = getStoreDataForClass(cmd.getFullClassName()).getTable();
         props.setProperty("table-name", table.getName());
         if (strategy == ValueGenerationStrategy.INCREMENT && tablegenmd != null)
