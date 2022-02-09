@@ -170,7 +170,7 @@ class HBaseQueryUtils
                     }
 
                     VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                    if (cmd.isVersioned() && vermd.getFieldName() == null)
+                    if (cmd.isVersioned() && vermd.getMemberName() == null)
                     {
                         // Add version column
                         byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
@@ -292,10 +292,10 @@ class HBaseQueryUtils
             // Set the version on the object
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-            if (vermd.getFieldName() != null)
+            if (vermd.getMemberName() != null)
             {
                 // Set the version from the field value
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                 version = sm.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else
@@ -384,10 +384,10 @@ class HBaseQueryUtils
             // Set the version on the object
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-            if (vermd.getFieldName() != null)
+            if (vermd.getMemberName() != null)
             {
                 // Set the version from the field value
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                 version = sm.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else
@@ -452,10 +452,10 @@ class HBaseQueryUtils
             DNStateManager sm = ec.findStateManager(pc);
             Object version = null;
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-            if (vermd.getFieldName() != null)
+            if (vermd.getMemberName() != null)
             {
                 // Set the version from the field value
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                 version = sm.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else

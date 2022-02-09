@@ -131,10 +131,10 @@ public class HBaseUtils
         if (cmd.isVersioned())
         {
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-            if (vermd.getFieldName() != null)
+            if (vermd.getMemberName() != null)
             {
                 // Version stored in a field
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                 Column col = table.getMemberColumnMappingForMember(verMmd).getColumn(0);
                 String familyName = HBaseUtils.getFamilyNameForColumn(col);
                 String qualifName = HBaseUtils.getQualifierNameForColumn(col);
@@ -142,7 +142,7 @@ public class HBaseUtils
                 try
                 {
                     byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-                    if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                    if (vermd.getStrategy() == VersionStrategy.VERSION_NUMBER)
                     {
                         if (verMmd.getType() == Integer.class || verMmd.getType() == int.class)
                         {
@@ -204,7 +204,7 @@ public class HBaseUtils
         try
         {
             byte[] bytes = result.getValue(familyName.getBytes(), qualifName.getBytes());
-            if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+            if (vermd.getStrategy() == VersionStrategy.VERSION_NUMBER)
             {
                 version = Bytes.toLong(bytes);
             }

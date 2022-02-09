@@ -206,10 +206,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     NucleusLogger.DATASTORE.debug(Localiser.msg("HBase.Insert.ObjectPersistedWithVersion", sm.getObjectAsPrintable(), sm.getInternalObjectId(), "" + nextVersion));
                 }
 
-                if (vermd.getFieldName() != null)
+                if (vermd.getMemberName() != null)
                 {
                     // Version stored in field, so update the field
-                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                     Object verFieldValue = nextVersion;
                     if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
                     {
@@ -325,7 +325,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 Result result = HBaseUtils.getResultForObject(sm, htable, table);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                ec.getLockManager().performOptimisticVersionCheck(sm, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
+                ec.getLockManager().performOptimisticVersionCheck(sm, vermd!=null ? vermd.getStrategy() : null, datastoreVersion);
             }
 
             int[] updatedFieldNums = fieldNumbers;
@@ -338,10 +338,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 Object nextVersion = ec.getLockManager().getNextVersion(vermd, sm.getTransactionalVersion());
                 sm.setTransactionalVersion(nextVersion);
 
-                if (vermd.getFieldName() != null)
+                if (vermd.getMemberName() != null)
                 {
                     // Update the field version value
-                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                     sm.replaceField(verMmd.getAbsoluteFieldNumber(), nextVersion);
                     boolean updatingVerField = false;
                     for (int i=0;i<fieldNumbers.length;i++)
@@ -609,7 +609,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 Result result = HBaseUtils.getResultForObject(sm, htable, table);
                 Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec, table, storeMgr);
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                ec.getLockManager().performOptimisticVersionCheck(sm, vermd!=null ? vermd.getVersionStrategy() : null, datastoreVersion);
+                ec.getLockManager().performOptimisticVersionCheck(sm, vermd!=null ? vermd.getStrategy() : null, datastoreVersion);
             }
 
             // Invoke any cascade deletion
@@ -735,10 +735,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (vermd != null && sm.getTransactionalVersion() == null)
             {
                 // No version set, so retrieve it
-                if (vermd.getFieldName() != null)
+                if (vermd.getMemberName() != null)
                 {
                     // Version stored in a field
-                    Object datastoreVersion = sm.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
+                    Object datastoreVersion = sm.provideField(cmd.getAbsolutePositionOfMember(vermd.getMemberName()));
                     sm.setVersion(datastoreVersion);
                 }
                 else
