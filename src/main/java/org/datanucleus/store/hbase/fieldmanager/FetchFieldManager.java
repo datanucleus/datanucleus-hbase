@@ -237,7 +237,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     return null;
                 }
 
-                DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embCmd, sm, fieldNumber);
+                DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embCmd, sm, fieldNumber, null);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmds, table);
                 embSM.replaceFields(embCmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
@@ -285,7 +285,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 DNStateManager pcSM = ec.findStateManager(value);
                 if (pcSM == null || ec.getApiAdapter().getExecutionContext(value) == null)
                 {
-                    ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, value, false, sm, fieldNumber);
+                    ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, value, false, sm, fieldNumber, null);
                 }
                 return value;
             }
