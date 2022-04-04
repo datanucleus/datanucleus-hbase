@@ -377,7 +377,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
 
             // Persist identity in the column of this object
-            Object valuePC = ec.persistObjectInternal(value, sm, fieldNumber, PersistableObjectType.PC);
+            Object valuePC = ec.persistObjectInternal(value, null, PersistableObjectType.PC, sm, fieldNumber);
             Object valueID = ec.getApiAdapter().getIdForObject(valuePC);
 
             if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
@@ -439,7 +439,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = collIter.next();
                     if (element != null)
                     {
-                        Object elementPC = ec.persistObjectInternal(element, sm, fieldNumber, PersistableObjectType.PC);
+                        Object elementPC = ec.persistObjectInternal(element, null, PersistableObjectType.PC, sm, fieldNumber);
                         Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
                         if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
@@ -486,7 +486,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object mapValue = entry.getValue();
                     if (ec.getApiAdapter().isPersistable(mapKey))
                     {
-                        Object pKey = ec.persistObjectInternal(mapKey, sm, fieldNumber, PersistableObjectType.PC);
+                        Object pKey = ec.persistObjectInternal(mapKey, null, PersistableObjectType.PC, sm, fieldNumber);
                         mapKey = ec.getApiAdapter().getIdForObject(pKey);
                         if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
@@ -497,7 +497,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     {
                         if (mapValue != null)
                         {
-                            Object pVal = ec.persistObjectInternal(mapValue, sm, fieldNumber, PersistableObjectType.PC);
+                            Object pVal = ec.persistObjectInternal(mapValue, null, PersistableObjectType.PC, sm, fieldNumber);
                             mapValue = ec.getApiAdapter().getIdForObject(pVal);
                             if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                             {
@@ -534,7 +534,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = Array.get(value, i);
                     if (element != null)
                     {
-                        Object elementPC = ec.persistObjectInternal(element, sm, fieldNumber, PersistableObjectType.PC);
+                        Object elementPC = ec.persistObjectInternal(element, null, PersistableObjectType.PC, sm, fieldNumber);
                         Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
                         if (relationStorageMode.equalsIgnoreCase(StoreManager.RELATION_IDENTITY_STORAGE_PERSISTABLE_IDENTITY))
                         {
