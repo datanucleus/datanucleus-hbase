@@ -18,10 +18,8 @@ Contributors :
 package org.datanucleus.store.hbase.query;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -130,79 +128,72 @@ class HBaseQueryUtils
         {
             final ClassLoaderResolver clr = ec.getClassLoaderResolver();
 
-            Iterator<Result> it = (Iterator<Result>) AccessController.doPrivileged(new PrivilegedExceptionAction()
+            Scan scan = new Scan();
+            if (filter != null)
             {
-                public Object run() throws Exception
+                scan.setFilter(filter);
+            }
+
+            // Retrieve all fetch-plan fields
+            for (int i=0; i<fpMembers.length; i++)
+            {
+                AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fpMembers[i]);
+                RelationType relationType = mmd.getRelationType(clr);
+                if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
                 {
-                    Scan scan = new Scan();
-                    if (filter != null)
+                    if (RelationType.isRelationSingleValued(relationType))
                     {
-                        scan.setFilter(filter);
+                        // 1-1 embedded
+                        List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
+                        embMmds.add(mmd);
+                        addColumnsToScanForEmbeddedMember(scan, embMmds, table, ec);
                     }
-
-                    // Retrieve all fetch-plan fields
-                    for (int i=0; i<fpMembers.length; i++)
-                    {
-                        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fpMembers[i]);
-                        RelationType relationType = mmd.getRelationType(clr);
-                        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
-                        {
-                            if (RelationType.isRelationSingleValued(relationType))
-                            {
-                                // 1-1 embedded
-                                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
-                                embMmds.add(mmd);
-                                addColumnsToScanForEmbeddedMember(scan, embMmds, table, ec);
-                            }
-                        }
-                        else
-                        {
-                            MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
-                            int numCols = mapping.getNumberOfColumns();
-                            for (int colNo=0;colNo<numCols;colNo++)
-                            {
-                                Column col = mapping.getColumn(colNo);
-                                byte[] familyName = HBaseUtils.getFamilyNameForColumn(col).getBytes();
-                                byte[] qualifName = HBaseUtils.getQualifierNameForColumn(col).getBytes();
-                                scan.addColumn(familyName, qualifName);
-                            }
-                        }
-                    }
-
-                    VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                    if (cmd.isVersioned() && vermd.getMemberName() == null)
-                    {
-                        // Add version column
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
-                        scan.addColumn(familyName, qualifName);
-                    }
-                    if (cmd.hasDiscriminatorStrategy())
-                    {
-                        // Add discriminator column
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR)).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR)).getBytes();
-                        scan.addColumn(familyName, qualifName);
-                    }
-                    if (cmd.getIdentityType() == IdentityType.DATASTORE)
-                    {
-                        // Add datastore identity column
-                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID)).getBytes();
-                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID)).getBytes();
-                        scan.addColumn(familyName, qualifName);
-                    }
-
-                    org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
-                    ResultScanner scanner = htable.getScanner(scan);
-                    if (ec.getStatistics() != null)
-                    {
-                        // Add to statistics
-                        ec.getStatistics().incrementNumReads();
-                    }
-                    Iterator<Result> it = scanner.iterator();
-                    return it;
                 }
-            });
+                else
+                {
+                    MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
+                    int numCols = mapping.getNumberOfColumns();
+                    for (int colNo=0;colNo<numCols;colNo++)
+                    {
+                        Column col = mapping.getColumn(colNo);
+                        byte[] familyName = HBaseUtils.getFamilyNameForColumn(col).getBytes();
+                        byte[] qualifName = HBaseUtils.getQualifierNameForColumn(col).getBytes();
+                        scan.addColumn(familyName, qualifName);
+                    }
+                }
+            }
+
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (cmd.isVersioned() && vermd.getMemberName() == null)
+            {
+                // Add version column
+                byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
+                byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.VERSION)).getBytes();
+                scan.addColumn(familyName, qualifName);
+            }
+            if (cmd.hasDiscriminatorStrategy())
+            {
+                // Add discriminator column
+                byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR)).getBytes();
+                byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR)).getBytes();
+                scan.addColumn(familyName, qualifName);
+            }
+            if (cmd.getIdentityType() == IdentityType.DATASTORE)
+            {
+                // Add datastore identity column
+                byte[] familyName = HBaseUtils.getFamilyNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID)).getBytes();
+                byte[] qualifName = HBaseUtils.getQualifierNameForColumn(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID)).getBytes();
+                scan.addColumn(familyName, qualifName);
+            }
+
+            org.apache.hadoop.hbase.client.Table htable = mconn.getHTable(tableName);
+            ResultScanner scanner = htable.getScanner(scan);
+            if (ec.getStatistics() != null)
+            {
+                // Add to statistics
+                ec.getStatistics().incrementNumReads();
+            }
+            Iterator<Result> it = scanner.iterator();
 
             // Instantiate the objects
             if (cmd.getIdentityType() == IdentityType.APPLICATION)
@@ -242,7 +233,7 @@ class HBaseQueryUtils
                 }
             }
         }
-        catch (PrivilegedActionException e)
+        catch (IOException e)
         {
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
