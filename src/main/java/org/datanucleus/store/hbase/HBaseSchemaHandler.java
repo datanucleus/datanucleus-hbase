@@ -19,7 +19,6 @@ package org.datanucleus.store.hbase;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -62,11 +61,9 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
     {
         if (isAutoCreateTables() || isAutoCreateColumns())
         {
-            Iterator<String> classIter = classNames.iterator();
             ClassLoaderResolver clr = storeMgr.getNucleusContext().getClassLoaderResolver(null);
-            while (classIter.hasNext())
+            for (String className : classNames)
             {
-                String className = classIter.next();
                 AbstractClassMetaData cmd = storeMgr.getMetaDataManager().getMetaDataForClass(className, clr);
                 if (cmd != null)
                 {
@@ -262,11 +259,9 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
     @Override
     public void deleteSchemaForClasses(Set<String> classNames, Properties props, Object connection)
     {
-        Iterator<String> classIter = classNames.iterator();
         ClassLoaderResolver clr = storeMgr.getNucleusContext().getClassLoaderResolver(null);
-        while (classIter.hasNext())
+        for (String className : classNames)
         {
-            String className = classIter.next();
             AbstractClassMetaData cmd = storeMgr.getMetaDataManager().getMetaDataForClass(className, clr);
             if (cmd != null)
             {
@@ -344,11 +339,9 @@ public class HBaseSchemaHandler extends AbstractStoreSchemaHandler
     {
         if (isValidateTables() || isValidateColumns())
         {
-            Iterator<String> classIter = classNames.iterator();
             ClassLoaderResolver clr = storeMgr.getNucleusContext().getClassLoaderResolver(null);
-            while (classIter.hasNext())
+            for (String className : classNames)
             {
-                String className = classIter.next();
                 AbstractClassMetaData cmd = storeMgr.getMetaDataManager().getMetaDataForClass(className, clr);
                 if (cmd != null)
                 {
