@@ -121,7 +121,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         super.close();
     }
 
-    protected void incrementUseCount()
+    public void incrementUseCount()
     {
         super.incrementUseCount();
         disableExpirationTime();
