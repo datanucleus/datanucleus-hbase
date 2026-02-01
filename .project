@@ -21,4 +21,16 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.pde.PluginNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>.._.._.._.._.._usr_local_software_datanucleus_datanucleus-hbase_src_main_resources</name>
+			<type>2</type>
+			<location>//usr/local/software/datanucleus/datanucleus-hbase/src/main/resources/</location>
+		</link>
+		<link>
+			<name>.._.._.._.._.._usr_local_software_datanucleus_datanucleus-hbase_src_test_resources</name>
+			<type>2</type>
+			<location>//usr/local/software/datanucleus/datanucleus-hbase/src/test/resources/</location>
+		</link>
+	</linkedResources>
 </projectDescription>
